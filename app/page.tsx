@@ -11,7 +11,11 @@ export default function Home() {
 
   return (
     <div className="relative h-screen w-full overflow-hidden bg-[#282828]">
-      <Viewer3D pointCloudData={null} />
+      <Viewer3D
+        pointCloudData={null}
+        occlusionMeshData={null}
+        navMeshData={null}
+      />
       <Navbar onDomainInfoLoaded={handleDomainInfoLoaded} />
       <div className="absolute bottom-4 right-4">
         <Image

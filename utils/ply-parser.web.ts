@@ -1,10 +1,20 @@
-import { PLYLoader } from "three/addons/loaders/PLYLoader.js"
+import { PLYLoader } from "three/examples/jsm/loaders/PLYLoader.js"
 import * as THREE from "three"
+
+interface PLYBuffer {
+  indices: number[];
+  vertices: number[];
+  normals: number[];
+  uvs: number[];
+  colors: number[];
+  faceVertexUvs: number[];
+  faceVertexColors: number[];
+}
 
 const plyLoader = new PLYLoader()
 const _color = new THREE.Color()
 
-function postProcess(buffer) {
+function postProcess(buffer: PLYBuffer): THREE.BufferGeometry {
   let geometry = new THREE.BufferGeometry()
 
   // mandatory buffer data
@@ -73,7 +83,8 @@ function postProcess(buffer) {
 export async function plyAsyncParse(data: ArrayBuffer | string, threaded?: boolean): Promise<THREE.BufferGeometry> {
   if (!window.Worker || !threaded) return plyLoader.parse(data)
 
-  let promiseResolve, promiseReject
+  let promiseResolve: (value: THREE.BufferGeometry) => void
+  let promiseReject: (reason?: any) => void
 
   console.log("hello worker")
 

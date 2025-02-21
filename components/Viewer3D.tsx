@@ -9,7 +9,7 @@ import { plyAsyncParse } from "@/utils/ply-parser.web"
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import type { Portal } from "@/utils/posemeshClientApi"
 import { matrixFromPose } from "@/utils/three-utils"
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 
 interface Viewer3DProps {
   pointCloudData: ArrayBuffer | null
