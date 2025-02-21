@@ -79,8 +79,11 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 
 - Node.js 18.x or later
 - npm or yarn
+- Docker (for containerized deployment)
 
 ### Installation
+
+#### Local Development
 
 1. Clone the repository:
 
@@ -95,7 +98,11 @@ cd domain-viewer
 npm install
 ```
 
-3. Create a `.env` file in the root directory with the same variables from `.env.template` and add your AUKI_APP_KEY and AUKI_APP_SECRET from https://console.auki.network.
+3. Create a `.env.local` file in the root directory with your credentials from https://console.auki.network:
+```bash
+AUKI_APP_KEY=your_app_key_here
+AUKI_APP_SECRET=your_app_secret_here
+```
 
 4. Run the development server:
 
@@ -105,14 +112,39 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+#### Docker Deployment
+
+1. Clone the repository and navigate to the project directory:
+```bash
+git clone git@github.com:aukilabs/domain-viewer.git
+cd domain-viewer
+```
+
+2. Create a `.env.local` file with your Auki credentials as shown above.
+
+3. Build and run with Docker Compose:
+```bash
+docker compose up -d
+```
+
+The application will be available at http://localhost:3000.
+
+To stop the application:
+```bash
+docker compose down
+```
+
 ### Building for Production
 
-Build the application:
-
+#### Local Build
 ```bash
 npm run build
 ```
 
+#### Docker Build
+```bash
+docker compose build
+```
 
 ## Usage
 
