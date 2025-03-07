@@ -1,5 +1,5 @@
 k8s-service:
   containerImage:
-    tag: replaceme
+    tag: 95bda9cb52899cca7dfaa67b2113bf90da5bb6ba
     pullPolicy: IfNotPresent
   replicaCount: 2

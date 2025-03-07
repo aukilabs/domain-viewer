@@ -23,9 +23,9 @@ k8s-service:
     servicePort: "app"
   containerResources:
     limits:
-      memory: 128Mi
+      memory: 96Mi
     requests:
-      memory: 128Mi
+      memory: 96Mi
   envVars:
     AUKI_API_SERVER: http://api
     AUKI_DDS_SERVER: http://dds
