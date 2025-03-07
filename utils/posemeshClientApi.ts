@@ -48,8 +48,7 @@ class PosemeshClientApi {
       const response = await fetch(`${domainServerUrl}/api/v1/domains/${domainId}/lighthouses`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          "User-Agent": "domain-viewer", 
-          "posemesh-client-id": this.posemeshClientId,
+          "User-Agent": "domain-viewer",
         },
       })
       const data = await response.json()
@@ -76,7 +75,6 @@ class PosemeshClientApi {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "User-Agent": "domain-viewer",
-          "posemesh-client-id": this.posemeshClientId,
         },
       })
       const data = await response.json()
@@ -106,7 +104,6 @@ class PosemeshClientApi {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "User-Agent": "domain-viewer",
-          "posemesh-client-id": this.posemeshClientId,
         },
       })
       const data = await response.arrayBuffer()
