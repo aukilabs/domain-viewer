@@ -1,0 +1,16 @@
+.dockerignore
+.DS_Store
+.git
+.github
+.gitignore
+.gitmodules
+.idea
+README.md
+Dockerfile
+Dockerfile.archive
+docker-compose.yml
+*.log
+
+charts/
+.env.template
+domain-viewer-demo.gif
