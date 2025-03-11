@@ -10,7 +10,6 @@ on:
       aws_region:
         required: false
       argocd_host:
-        type: string
         required: false
       argocd_password:
         required: false
