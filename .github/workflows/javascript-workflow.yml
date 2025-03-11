@@ -3,11 +3,9 @@ name: JavaScript workflow
 on:
   workflow_call:
     secrets:
-      aws_access_key:
+      docker_username:
         required: false
-      aws_secret_access_key:
-        required: false
-      aws_region:
+      docker_password:
         required: false
       argocd_host:
         required: false
@@ -55,17 +53,12 @@ jobs:
           echo "ARGOCD_APP=${lowercase_argocd_app}" >> $GITHUB_ENV
       - name: Check out code
         uses: actions/checkout@v4
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Log in to Docker Hub
         if: ${{ inputs.enable_build  }}
+        uses: docker/login-action@v3
         with:
-          aws-access-key-id: ${{ secrets.aws_access_key }}
-          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: ${{ secrets.aws_region }}
-      - name: Login to AWS ECR
-        if: ${{ inputs.enable_build  }}
-        id: ecr-login
-        uses: aws-actions/amazon-ecr-login@v2
+          username: ${{ secrets.docker_username }}
+          password: ${{ secrets.docker_password }}
       - name: Set up Docker Buildx
         if: ${{ inputs.enable_build  }}
         uses: docker/setup-buildx-action@v3
@@ -75,22 +68,12 @@ jobs:
           # Branch or tag name with / replaced by __
           ref_name_tag="$(echo "${{ github.ref_name }}" | sed 's@/@__@g')"
 
-          tags="-t ${{ steps.ecr-login.outputs.registry }}/${IMAGE_NAME}:${{ github.sha }} -t ${{ steps.ecr-login.outputs.registry }}/${IMAGE_NAME}:${ref_name_tag}"
-          test "${{ inputs.enable_tag_latest }}" = "true" && tags="${tags} -t ${{ steps.ecr-login.outputs.registry }}/${IMAGE_NAME}:latest"
+          tags="-t aukilabs/${IMAGE_NAME}:${{ github.sha }} -t aukilabs/${IMAGE_NAME}:${ref_name_tag}"
+          test "${{ inputs.enable_tag_latest }}" = "true" && tags="${tags} -t aukilabs/${IMAGE_NAME}:latest"
 
           docker buildx create --use
           docker buildx build --platform linux/amd64 $tags --push .
 
-      - name: Wait for ECR image replication
-        if: ${{ inputs.enable_sync || inputs.enable_restart }}
-        run: |
-          sleep 5
-          rounds=15
-          for i in $(seq 1 ${rounds}); do
-            echo "Waiting for ECR image replication to finish (${i}/${rounds})..."
-            aws ecr describe-image-replication-status --repository-name "${IMAGE_NAME}" --image-id "imageTag=${{ github.sha }}" --region "${{ secrets.aws_region }}" --output text | grep IN_PROGRESS || break
-            sleep 10
-          done
       - name: Authenticate ArgoCD
         uses: clowdhaus/argo-cd-action@v2.3.0
         if: ${{ inputs.enable_sync || inputs.enable_restart }}

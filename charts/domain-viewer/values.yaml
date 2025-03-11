@@ -1,6 +1,6 @@
 k8s-service:
   containerImage:
-    repository: 026987513085.dkr.ecr.us-east-1.amazonaws.com/domain-viewer
+    repository: aukilabs/domain-viewer
     tag: latest
     pullPolicy: Always
   applicationName: domain-viewer
