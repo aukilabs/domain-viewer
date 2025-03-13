@@ -1,4 +1,4 @@
 k8s-service:
   containerImage:
-    tag: 95bda9cb52899cca7dfaa67b2113bf90da5bb6ba
+    tag: 13b58d3ceef69c83109fe07a24df415eeba564df
     pullPolicy: IfNotPresent

@@ -1,0 +1,94 @@
+name: JavaScript workflow
+
+on:
+  workflow_call:
+    secrets:
+      docker_username:
+        required: false
+      docker_password:
+        required: false
+      argocd_host:
+        required: false
+      argocd_password:
+        required: false
+      npm_publisher_token:
+        required: false
+    inputs:
+      enable_build:
+        default: false
+        type: boolean
+      enable_tag_latest:
+        default: false
+        type: boolean
+      enable_sync:
+        default: false
+        type: boolean
+      enable_restart:
+        default: false
+        type: boolean
+      image_name:
+        required: false
+        type: string
+      argocd_app:
+        type: string
+        required: false
+jobs:
+  build:
+    name: JavaScript Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure environment
+        run: |
+          image_name="${{ github.event.repository.name }}"
+          if [ -n "${{ inputs.image_name }}" ]; then
+            image_name="${{ inputs.image_name }}"
+          fi
+          lowercase_image_name="${image_name,,}"
+          echo "IMAGE_NAME=${lowercase_image_name}" >> $GITHUB_ENV
+          argocd_app="${lowercase_image_name}"
+          if [ -n "${{ inputs.argocd_app }}" ]; then
+            argocd_app="${{ inputs.argocd_app }}"
+          fi
+          lowercase_argocd_app="${argocd_app,,}"
+          echo "ARGOCD_APP=${lowercase_argocd_app}" >> $GITHUB_ENV
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Log in to Docker Hub
+        if: ${{ inputs.enable_build  }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.docker_username }}
+          password: ${{ secrets.docker_password }}
+      - name: Set up Docker Buildx
+        if: ${{ inputs.enable_build  }}
+        uses: docker/setup-buildx-action@v3
+      - name: Docker build and push
+        if: ${{ inputs.enable_build }}
+        run: |
+          # Branch or tag name with / replaced by __
+          ref_name_tag="$(echo "${{ github.ref_name }}" | sed 's@/@__@g')"
+
+          tags="-t aukilabs/${IMAGE_NAME}:${{ github.sha }} -t aukilabs/${IMAGE_NAME}:${ref_name_tag}"
+          test "${{ inputs.enable_tag_latest }}" = "true" && tags="${tags} -t aukilabs/${IMAGE_NAME}:latest"
+
+          docker buildx create --use
+          docker buildx build --platform linux/amd64 $tags --push .
+
+      - name: Authenticate ArgoCD
+        uses: clowdhaus/argo-cd-action@v2.3.0
+        if: ${{ inputs.enable_sync || inputs.enable_restart }}
+        with:
+          command: login
+          options: --username admin --password "${{ secrets.argocd_password }}" --grpc-web "${{ secrets.argocd_host }}:443"
+      - name: Sync ArgoCD app
+        uses: clowdhaus/argo-cd-action@v2.3.0
+        if: ${{ inputs.enable_sync }}
+        with:
+          command: app sync "${{ env.ARGOCD_APP }}"
+          options: --grpc-web --async
+      - name: Restart ArgoCD app
+        uses: clowdhaus/argo-cd-action@v2.3.0
+        if: ${{ inputs.enable_restart }}
+        with:
+          command: app actions run "${{ env.ARGOCD_APP }}" restart
+          options: --kind Deployment --resource-name "${{ env.ARGOCD_APP }}" --grpc-web

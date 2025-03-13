@@ -8,17 +8,16 @@ on:
 jobs:
   deploy:
     name: Build & push the image, and deploy it to dev
-    uses: aukilabs/github-actions/.github/workflows/javascript-workflow.yml@v2
+    uses: ./.github/workflows/javascript-workflow.yml
     with:
       enable_build: true
       enable_sync: true
       enable_restart: true
       enable_tag_latest: true
       image_name: ${{ github.event.repository.name }}
-      argocd_host: "argocd.dev.aukiverse.com"
       argocd_app: ${{ github.event.repository.name }}
     secrets:
-      aws_access_key: ${{ secrets.GLOBAL_COMMON_AWS_ACCESS_KEY }}
-      aws_secret_access_key: ${{ secrets.GLOBAL_COMMON_AWS_SECRET_ACCESS_KEY }}
-      aws_region: ${{ secrets.GLOBAL_COMMON_AWS_REGION }}
-      argocd_password: ${{ secrets.GLOBAL_DEV_ARGOCD_PASSWORD }}
+      docker_username: ${{ secrets.DOCKER_USERNAME }}
+      docker_password: ${{ secrets.DOCKER_PASSWORD }}
+      argocd_host: ${{ secrets.GLOBAL_PUBLIC_ARGOCD_HOST }}
+      argocd_password: ${{ secrets.GLOBAL_PUBLIC_ARGOCD_PASSWORD }}

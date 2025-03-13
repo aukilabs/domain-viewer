@@ -10,12 +10,10 @@ on:
 jobs:
   build:
     name: Build and push the image
-    uses: aukilabs/github-actions/.github/workflows/javascript-workflow.yml@v2
+    uses: ./.github/workflows/javascript-workflow.yml
     with:
       enable_build: true
       image_name: ${{ github.event.repository.name }}
     secrets:
-      aws_access_key: ${{ secrets.GLOBAL_COMMON_AWS_ACCESS_KEY }}
-      aws_secret_access_key: ${{ secrets.GLOBAL_COMMON_AWS_SECRET_ACCESS_KEY }}
-      aws_region: ${{ secrets.GLOBAL_COMMON_AWS_REGION }}
-      argocd_password: ${{ secrets.GLOBAL_DEV_ARGOCD_PASSWORD }}
+      docker_username: ${{ secrets.DOCKER_USERNAME }}
+      docker_password: ${{ secrets.DOCKER_PASSWORD }}
