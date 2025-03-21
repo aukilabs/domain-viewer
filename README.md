@@ -170,3 +170,5 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 - Built with [Next.js](https://nextjs.org/)
 - 3D rendering powered by [Three.js](https://threejs.org/)
 - UI components from [Radix UI](https://www.radix-ui.com/)
+
+> ℹ️ **Info:** This code was generated with the assistance of AI tools. While efforts have been made to ensure quality and functionality, users should exercise appropriate caution and review critical components, especially those handling security, data processing, or core business logic.
