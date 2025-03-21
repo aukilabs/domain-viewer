@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Copy, ChevronDown, Globe, Clock, Database, Link } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { fetchIpInfo } from "@/utils/fetchIpInfo"
 import { ToggleVisibility } from "@/components/ToggleVisibility"
 
 interface DomainInfoProps {
@@ -14,7 +13,6 @@ interface DomainInfoProps {
     createdAt: string
     updatedAt: string
     url: string
-    ip: string
   }
   onTogglePortals: () => void
   portalsVisible: boolean
@@ -38,17 +36,6 @@ export default function DomainInfo({
   pointCloudVisible
 }: DomainInfoProps) {
   const [isDetailsOpen, setIsDetailsOpen] = useState(true)
-  const [country, setCountry] = useState<{ city: string; country: string } | null>(null)
-
-  useEffect(() => {
-    async function getCountry() {
-      const ipInfo = await fetchIpInfo(domainInfo.ip)
-      if (ipInfo) {
-        setCountry(ipInfo)
-      }
-    }
-    getCountry()
-  }, [domainInfo.ip])
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -60,17 +47,17 @@ export default function DomainInfo({
   }
 
   return (
-    <div className="absolute bottom-4 left-4 w-[400px] space-y-2 font-sans">
+    <div className="fixed inset-4 top-24 w-full overflow-y-auto space-y-2 font-sans md:fixed md:left-4 md:bottom-4 md:w-[400px] md:top-auto">
       <Collapsible
         open={isDetailsOpen}
         onOpenChange={setIsDetailsOpen}
         className="rounded-xl bg-[#282828] p-4 space-y-4"
       >
-        <CollapsibleTrigger className="flex w-full items-center justify-between">
-          <h2 className="text-[#fafafa] text-xl font-medium">Domain details</h2>
-          <ChevronDown className={`h-5 w-5 text-[#fafafa] transition-transform ${isDetailsOpen ? "" : "rotate-180"}`} />
+        <CollapsibleTrigger className="flex w-full items-center justify-between sticky top-0 bg-[#282828] py-2 z-10">
+          <h2 className="text-[#fafafa] text-base sm:text-xl font-medium">Domain details</h2>
+          <ChevronDown className={`h-4 w-4 sm:h-5 sm:w-5 text-[#fafafa] transition-transform ${isDetailsOpen ? "" : "rotate-180"}`} />
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-3">
+        <CollapsibleContent className="space-y-3 overflow-y-auto max-h-[calc(100vh-20rem)]">
           {/* Domain ID */}
           <div className="rounded-lg bg-[#191919] p-3">
             <div className="flex items-center justify-between text-[#626262] text-sm mb-1">
@@ -126,27 +113,6 @@ export default function DomainInfo({
               </Button>
             </div>
             <div className="text-[#fafafa] text-sm break-all">{domainInfo.url}</div>
-          </div>
-
-          {/* Domain server location */}
-          <div className="rounded-lg bg-[#191919] p-3">
-            <div className="flex items-center justify-between text-[#626262] text-sm mb-1">
-              <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4" />
-                <span>Domain server location</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-[#fafafa] hover:bg-[#fafafa]/10"
-                onClick={() => copyToClipboard(country ? `${country.city}, ${country.country}` : "Unknown")}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="text-[#fafafa] text-sm">
-              {country ? `${country.city}, ${country.country}` : "Loading..."}
-            </div>
           </div>
 
           {/* Created At */}
