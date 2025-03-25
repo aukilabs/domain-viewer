@@ -30,52 +30,30 @@ export function ToggleVisibility({
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger className="flex w-full items-center justify-between">
-        <h2 className="text-[#fafafa] text-xl font-medium">Toggle Visibility</h2>
-        <ChevronDown className={`h-5 w-5 text-[#fafafa] transition-transform ${isOpen ? "" : "rotate-180"}`} />
+      <CollapsibleTrigger className="flex w-full items-center justify-between bg-[#282828] py-2 z-10">
+        <h2 className="text-[#fafafa] text-base sm:text-xl font-medium">Toggle Visibility</h2>
+        <ChevronDown className={`h-4 w-4 sm:h-5 sm:w-5 text-[#fafafa] transition-transform ${isOpen ? "" : "rotate-180"}`} />
       </CollapsibleTrigger>
-      <CollapsibleContent className="pt-4">
-        <div className="flex gap-2">
-          <button
-            className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-lg text-[#fafafa]",
-              portalsVisible ? "bg-[#ff5d48] hover:bg-[#ff5d48]/90" : "bg-[#191919] hover:bg-[#191919]/90"
-            )}
-            aria-label="QR Code"
-            onClick={onTogglePortals}
-          >
-            <QrCode className="h-5 w-5" />
-          </button>
-          <button
-            className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-lg text-[#fafafa]",
-              navMeshVisible ? "bg-[#ff5d48] hover:bg-[#ff5d48]/90" : "bg-[#191919] hover:bg-[#191919]/90"
-            )}
-            aria-label="Map"
-            onClick={onToggleNavMesh}
-          >
-            <Map className="h-5 w-5" />
-          </button>
-          <button
-            className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-lg text-[#fafafa]",
-              occlusionVisible ? "bg-[#ff5d48] hover:bg-[#ff5d48]/90" : "bg-[#191919] hover:bg-[#191919]/90"
-            )}
-            aria-label="Box"
-            onClick={onToggleOcclusion}
-          >
-            <Box className="h-5 w-5" />
-          </button>
-          <button
-            className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-lg text-[#fafafa]",
-              pointCloudVisible ? "bg-[#ff5d48] hover:bg-[#ff5d48]/90" : "bg-[#191919] hover:bg-[#191919]/90"
-            )}
-            aria-label="Cloud"
-            onClick={onTogglePointCloud}
-          >
-            <Cloud className="h-5 w-5" />
-          </button>
+      <CollapsibleContent className="pt-2">
+        <div className="grid grid-cols-4 gap-2 sm:flex sm:gap-2">
+          {[
+            { icon: QrCode, label: "Toggle Portals", visible: portalsVisible, onClick: onTogglePortals },
+            { icon: Map, label: "Toggle Navigation Mesh", visible: navMeshVisible, onClick: onToggleNavMesh },
+            { icon: Box, label: "Toggle Occlusion", visible: occlusionVisible, onClick: onToggleOcclusion },
+            { icon: Cloud, label: "Toggle Point Cloud", visible: pointCloudVisible, onClick: onTogglePointCloud }
+          ].map(({ icon: Icon, label, visible, onClick }) => (
+            <button
+              key={label}
+              className={cn(
+                "flex h-8 sm:h-10 w-full items-center justify-center rounded-lg text-[#fafafa] sm:w-10",
+                visible ? "bg-[#ff5d48] hover:bg-[#ff5d48]/90" : "bg-[#191919] hover:bg-[#191919]/90"
+              )}
+              aria-label={label}
+              onClick={onClick}
+            >
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+            </button>
+          ))}
         </div>
       </CollapsibleContent>
     </Collapsible>
