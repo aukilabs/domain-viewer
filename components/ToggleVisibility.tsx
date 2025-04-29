@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronDown, Cloud, QrCode, Map, Box } from "lucide-react"
+import { ChevronDown, Cloud, QrCode, Map, Box, Boxes } from "lucide-react"
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -14,6 +14,8 @@ interface ToggleVisibilityProps {
   occlusionVisible: boolean
   onTogglePointCloud: () => void
   pointCloudVisible: boolean
+  onToggleScan3D: () => void
+  scan3DVisible: boolean
 }
 
 export function ToggleVisibility({ 
@@ -24,7 +26,9 @@ export function ToggleVisibility({
   onToggleOcclusion,
   occlusionVisible,
   onTogglePointCloud,
-  pointCloudVisible
+  pointCloudVisible,
+  onToggleScan3D,
+  scan3DVisible
 }: ToggleVisibilityProps) {
   const [isOpen, setIsOpen] = React.useState(false)
 
@@ -35,12 +39,13 @@ export function ToggleVisibility({
         <ChevronDown className={`h-4 w-4 sm:h-5 sm:w-5 text-[#fafafa] transition-transform ${isOpen ? "" : "rotate-180"}`} />
       </CollapsibleTrigger>
       <CollapsibleContent className="pt-2">
-        <div className="grid grid-cols-4 gap-2 sm:flex sm:gap-2">
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-2">
           {[
             { icon: QrCode, label: "Toggle Portals", visible: portalsVisible, onClick: onTogglePortals },
             { icon: Map, label: "Toggle Navigation Mesh", visible: navMeshVisible, onClick: onToggleNavMesh },
             { icon: Box, label: "Toggle Occlusion", visible: occlusionVisible, onClick: onToggleOcclusion },
-            { icon: Cloud, label: "Toggle Point Cloud", visible: pointCloudVisible, onClick: onTogglePointCloud }
+            { icon: Cloud, label: "Toggle Point Cloud", visible: pointCloudVisible, onClick: onTogglePointCloud },
+            { icon: Boxes, label: "Toggle 3D Model", visible: scan3DVisible, onClick: onToggleScan3D }
           ].map(({ icon: Icon, label, visible, onClick }) => (
             <button
               key={label}

@@ -22,6 +22,8 @@ interface DomainInfoProps {
   occlusionVisible: boolean
   onTogglePointCloud: () => void
   pointCloudVisible: boolean
+  onToggleScan3D: () => void
+  scan3DVisible: boolean
 }
 
 export default function DomainInfo({ 
@@ -33,7 +35,9 @@ export default function DomainInfo({
   onToggleOcclusion,
   occlusionVisible,
   onTogglePointCloud,
-  pointCloudVisible
+  pointCloudVisible,
+  onToggleScan3D,
+  scan3DVisible
 }: DomainInfoProps) {
   const [isDetailsOpen, setIsDetailsOpen] = useState(true)
 
@@ -164,6 +168,8 @@ export default function DomainInfo({
           occlusionVisible={occlusionVisible}
           onTogglePointCloud={onTogglePointCloud}
           pointCloudVisible={pointCloudVisible}
+          onToggleScan3D={onToggleScan3D}
+          scan3DVisible={scan3DVisible}
         />
       </Collapsible>
     </div>
