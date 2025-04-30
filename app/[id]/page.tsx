@@ -92,14 +92,10 @@ export default function DomainPage({ params }: { params: { id: string } }) {
         const currentTime = Date.now()
         // Convert nanoseconds timestamp to milliseconds for Date constructor
         const dataTime = new Date(Number(newDomainDeviceData.timestamp) / 1000000)
-        // Log the current time and data time for debugging
-        console.log(`data time: ${newDomainDeviceData.timestamp}`)
-        console.log(`Current time: ${currentTime}`)
-        console.log(`Data time: ${dataTime}`)
         const timeDiff = currentTime - dataTime.getTime()
-        console.log(`Time difference: ${timeDiff}ms`)
         
-        if (timeDiff <= 5000) { // 5 seconds in milliseconds
+        if (true) { // 10 seconds in milliseconds
+        // if (newDomainDeviceData.device_id === "mentra_posemesh_client_id") { // 10 seconds in milliseconds
           console.log(`[${new Date().toISOString()}] Domain device data refreshed:`, newDomainDeviceData)
           setDomainDeviceData(prevData => {
             // Remove any existing data for this device
@@ -249,7 +245,7 @@ export default function DomainPage({ params }: { params: { id: string } }) {
           } catch (error) {
             console.error("Error during polling:", error)
           }
-        }, 2000)
+        }, 1000)
       }
       else {
         console.log(`[${new Date().toISOString()}] No domain device data found for this domain`)

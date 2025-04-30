@@ -1,9 +1,9 @@
 "use client"
 
 import { Canvas, useThree, useFrame } from "@react-three/fiber"
-import { OrbitControls, useGLTF } from "@react-three/drei"
+import { OrbitControls, useGLTF, Text } from "@react-three/drei"
 import { CustomGrid } from "./CustomGrid"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useMemo } from "react"
 import * as THREE from "three"
 import { plyAsyncParse } from "@/utils/ply-parser.web"
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
@@ -11,6 +11,27 @@ import type { Portal } from "@/utils/posemeshClientApi"
 import { matrixFromPose } from "@/utils/three-utils"
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 
+/**
+ * Device data interface for displaying devices in 3D space
+ */
+interface DeviceData {
+  device_id: string
+  device_type: string
+  name?: string
+  pose: {
+    px: number
+    py: number
+    pz: number
+    rx: number
+    ry: number
+    rz: number
+    rw: number
+  }
+}
+
+/**
+ * Props for the main Viewer3D component
+ */
 interface Viewer3DProps {
   pointCloudData: ArrayBuffer | null
   portals?: Portal[] | null
@@ -21,46 +42,7 @@ interface Viewer3DProps {
   occlusionVisible?: boolean
   pointCloudVisible?: boolean
   scan3DVisible?: boolean
-  domainDeviceData?: any
-}
-
-function parseASCIIPLY(data: ArrayBuffer): THREE.BufferGeometry {
-  const text = new TextDecoder().decode(data)
-  const lines = text.split("\n")
-
-  let vertexCount = 0
-  let headerEnd = 0
-
-  // Parse header
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes("element vertex")) {
-      vertexCount = Number.parseInt(lines[i].split(" ")[2])
-    }
-    if (lines[i].trim() === "end_header") {
-      headerEnd = i + 1
-      break
-    }
-  }
-
-  // Parse vertex data
-  const positions = new Float32Array(vertexCount * 3)
-  const colors = new Float32Array(vertexCount * 3)
-
-  for (let i = 0; i < vertexCount; i++) {
-    const parts = lines[i + headerEnd].trim().split(" ")
-    positions[i * 3] = Number.parseFloat(parts[0])
-    positions[i * 3 + 1] = Number.parseFloat(parts[1])
-    positions[i * 3 + 2] = Number.parseFloat(parts[2])
-    colors[i * 3] = Number.parseInt(parts[3]) / 255.0
-    colors[i * 3 + 1] = Number.parseInt(parts[4]) / 255.0
-    colors[i * 3 + 2] = Number.parseInt(parts[5]) / 255.0
-  }
-
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3))
-  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3))
-
-  return geometry
+  domainDeviceData?: DeviceData[] | null
 }
 
 /**
@@ -75,8 +57,9 @@ function PointCloud({ data }: { data: ArrayBuffer }) {
   useEffect(() => {
     if (!data) return
 
+    const cleanupRef = { current: () => {} }
+
     plyAsyncParse(data, true).then((geometry) => {
-      console.log("completed parse ply")
       const material = new THREE.PointsMaterial({
         size: 0.09,
         vertexColors: true,
@@ -89,16 +72,19 @@ function PointCloud({ data }: { data: ArrayBuffer }) {
       const points = new THREE.Points(geometry, material)
       scene.add(points)
       pointsRef.current = points
+      
+      // Define cleanup for this effect
+      cleanupRef.current = () => {
+        scene.remove(points)
+        geometry.dispose()
+        material.dispose()
+      }
+    }).catch(error => {
+      console.error("Error parsing PLY data:", error)
     })
 
-    // const geometry = parseASCIIPLY(data)
-
     return () => {
-      if (pointsRef.current) {
-        scene.remove(pointsRef.current)
-        // geometry.dispose() //This line might cause error if geometry is not defined.  Consider removing or adding error handling.
-        // material.dispose() //This line might cause error if material is not defined. Consider removing or adding error handling.
-      }
+      cleanupRef.current()
     }
   }, [data, scene])
 
@@ -115,12 +101,13 @@ function Portals({ portals = [] }: { portals: Portal[] | null | undefined }) {
   const { scene: gltfScene } = useGLTF('/QR.glb')
   const { scene } = useThree()
   const modelsRef = useRef<Map<string, THREE.Group>>(new Map())
-  const matrix = new THREE.Matrix4()
+  const matrix = useMemo(() => new THREE.Matrix4(), [])
 
   useEffect(() => {
-    if (!gltfScene) return
+    if (!gltfScene || !portals || portals.length === 0) return
 
-    portals?.forEach(portal => {
+    // Create or update models for each portal
+    portals.forEach(portal => {
       let model: THREE.Group
       
       if (modelsRef.current.has(portal.id)) {
@@ -131,10 +118,11 @@ function Portals({ portals = [] }: { portals: Portal[] | null | undefined }) {
         modelsRef.current.set(portal.id, model)
       }
 
-      // Use matrixFromPose to set the transform
+      // Set portal position and rotation
       if (matrixFromPose(portal, matrix)) {
         matrix.decompose(model.position, model.quaternion, model.scale)
-        // Apply the reported size
+        
+        // Apply the reported size if available
         if (portal.reported_size) {
           const size = portal.reported_size * 0.01 // Convert to meters
           model.scale.setScalar(size)
@@ -144,37 +132,42 @@ function Portals({ portals = [] }: { portals: Portal[] | null | undefined }) {
 
     // Cleanup removed portals
     modelsRef.current.forEach((model, id) => {
-      if (!portals?.find(p => p.id === id)) {
+      if (!portals.find(p => p.id === id)) {
         scene.remove(model)
-        model.traverse((object) => {
-          if (object instanceof THREE.Mesh) {
-            object.geometry.dispose()
-            if (object.material instanceof THREE.Material) {
-              object.material.dispose()
-            }
-          }
-        })
+        disposeModel(model)
         modelsRef.current.delete(id)
       }
     })
 
+    // Cleanup function
     return () => {
       modelsRef.current.forEach((model) => {
         scene.remove(model)
-        model.traverse((object) => {
-          if (object instanceof THREE.Mesh) {
-            object.geometry.dispose()
-            if (object.material instanceof THREE.Material) {
-              object.material.dispose()
-            }
-          }
-        })
+        disposeModel(model)
       })
       modelsRef.current.clear()
     }
-  }, [gltfScene, scene, portals])
+  }, [gltfScene, scene, portals, matrix])
 
   return null
+}
+
+/**
+ * Helper function to dispose of Three.js model resources
+ */
+function disposeModel(model: THREE.Object3D) {
+  model.traverse((object) => {
+    if (object instanceof THREE.Mesh) {
+      if (object.geometry) {
+        object.geometry.dispose()
+      }
+      if (object.material instanceof THREE.Material) {
+        object.material.dispose()
+      } else if (Array.isArray(object.material)) {
+        object.material.forEach(material => material.dispose())
+      }
+    }
+  })
 }
 
 /**
@@ -188,6 +181,9 @@ function CameraController({ pointCloudData }: { pointCloudData: ArrayBuffer | nu
   const [isIdle, setIsIdle] = useState(false)
   const lastInteractionTime = useRef(Date.now())
   const animationRef = useRef<number | null>(null)
+  
+  // Time before starting auto-rotation (ms)
+  const IDLE_TIMEOUT = 500000
 
   const resetIdleTimer = () => {
     lastInteractionTime.current = Date.now()
@@ -219,13 +215,16 @@ function CameraController({ pointCloudData }: { pointCloudData: ArrayBuffer | nu
     }
   }
 
+  // Check for idle state in animation frame
   useFrame(() => {
-    if (pointCloudData && !isIdle && Date.now() - lastInteractionTime.current > 5000) {
+    if (pointCloudData && !isIdle && 
+        Date.now() - lastInteractionTime.current > IDLE_TIMEOUT) {
       setIsIdle(true)
       startOrbitAnimation()
     }
   })
 
+  // Cleanup animation frame on unmount
   useEffect(() => {
     return () => {
       if (animationRef.current) {
@@ -309,12 +308,7 @@ function OcclusionMesh({ occlusionMeshData }: { occlusionMeshData: ArrayBuffer |
     return () => {
       if (groupRef.current) {
         scene.remove(group)
-        group.traverse((child) => {
-          if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
-            child.geometry.dispose()
-            child.material.dispose()
-          }
-        })
+        disposeModel(group)
       }
     }
   }, [occlusionMeshData, scene])
@@ -363,12 +357,7 @@ function NavMesh({ navMeshData }: { navMeshData: ArrayBuffer | null }) {
     return () => {
       if (groupRef.current) {
         scene.remove(group)
-        group.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            child.geometry.dispose()
-            child.material.dispose()
-          }
-        })
+        disposeModel(group)
       }
     }
   }, [navMeshData, scene])
@@ -381,7 +370,8 @@ function NavMesh({ navMeshData }: { navMeshData: ArrayBuffer | null }) {
  */
 function Scan3D() {
   const { scene } = useThree()
-  const { scene: gltfScene } = useGLTF('/L10CommonSpace.glb')
+  // const { scene: gltfScene } = useGLTF('/L10CommonSpace.glb')
+  const { scene: gltfScene } = useGLTF('/lounge.glb')
   const modelRef = useRef<THREE.Group | null>(null)
 
   useEffect(() => {
@@ -390,11 +380,8 @@ function Scan3D() {
     // Clone the model to avoid modifying the cached original
     const model = gltfScene.clone()
     
-    // Apply position offset
-    model.position.set(0, 0, 0)  // Offset in x, y, z directions
-    
-    // Optional: You can also apply rotation if needed
-    // model.rotation.set(0, Math.PI / 4, 0)  // Rotate 45 degrees around Y axis
+    // Apply offset along Z axis
+    model.position.set(1, 0, 2)
     
     // Add the model to the scene
     scene.add(model)
@@ -403,16 +390,7 @@ function Scan3D() {
     return () => {
       if (modelRef.current) {
         scene.remove(model)
-        model.traverse((object) => {
-          if (object instanceof THREE.Mesh) {
-            if (object.geometry) object.geometry.dispose()
-            if (object.material instanceof THREE.Material) {
-              object.material.dispose()
-            } else if (Array.isArray(object.material)) {
-              object.material.forEach(material => material.dispose())
-            }
-          }
-        })
+        disposeModel(model)
       }
     }
   }, [gltfScene, scene])
@@ -426,28 +404,56 @@ function Scan3D() {
  * 
  * @param domainDeviceData - Array of device data containing pose and type information
  */
-function DomainDevices3D({ domainDeviceData }: { domainDeviceData: any[] | null }) {
+function DomainDevices3D({ domainDeviceData }: { domainDeviceData: DeviceData[] | null }) {
   const { scene } = useThree()
-  const { scene: glassesScene } = useGLTF('/glasses.glb')
-  const { scene: phoneScene } = useGLTF('/smartphone.glb')
-  const { scene: robotScene } = useGLTF('/padbot-robot-w3.glb')
+  const glassesGltf = useGLTF('/glasses.glb')
+  const phoneGltf = useGLTF('/smartphone.glb')
+  const robotGltf = useGLTF('/padbot-robot-w3.glb')
+  
+  // Store references to all device models in the scene
   const modelsRef = useRef<Map<string, THREE.Group>>(new Map())
-  const matrix = new THREE.Matrix4()
   const [lastUpdate, setLastUpdate] = useState<string>("")
+  
+  // Store and manage textures for app logos
   const [textures, setTextures] = useState<Map<string, THREE.Texture>>(new Map())
   const textureLoader = useRef(new THREE.TextureLoader())
   const loadedAppNames = useRef<Set<string>>(new Set())
+  
+  // Reuse matrix to avoid creating new ones
+  const matrix = useMemo(() => new THREE.Matrix4(), [])
+  
+  // Store the target transforms for lerping
+  const targetTransforms = useRef(new Map<string, {
+    position: THREE.Vector3,
+    quaternion: THREE.Quaternion,
+    scale: THREE.Vector3,
+    startPosition: THREE.Vector3,
+    startQuaternion: THREE.Quaternion,
+    startScale: THREE.Vector3,
+    startTime: number
+  }>())
+  
+  // Lerping configuration
+  const LERP_DURATION = 2000 // 2 seconds in milliseconds (reduced from 10 seconds)
+  const lerpingActive = useRef(false)
+  
+  // Helper vectors for decomposing matrix
+  const tempPosition = useMemo(() => new THREE.Vector3(), [])
+  const tempQuaternion = useMemo(() => new THREE.Quaternion(), [])
+  const tempScale = useMemo(() => new THREE.Vector3(1, 1, 1), [])
 
   // Load textures for all unique app names
   useEffect(() => {
     if (!domainDeviceData) return
 
     // Get unique app names
-    const uniqueAppNames = new Set(
-      domainDeviceData
-        .map(device => device.name)
-        .filter(Boolean)
-    )
+    const uniqueAppNames = new Set<string>()
+    
+    domainDeviceData.forEach(device => {
+      if (device.name) {
+        uniqueAppNames.add(device.name)
+      }
+    })
     
     // Load textures for each app name
     uniqueAppNames.forEach(appName => {
@@ -478,9 +484,17 @@ function DomainDevices3D({ domainDeviceData }: { domainDeviceData: any[] | null 
     }
   }, [domainDeviceData]) // Remove textures from dependencies
 
+  // Update device models when device data or textures change
   useEffect(() => {
-    if (!glassesScene || !phoneScene || !robotScene || !domainDeviceData) {
-      console.log("DomainDevices3D: Missing device scenes or domainDeviceData")
+    if (!domainDeviceData) return
+    
+    // Extract required scenes from loaded GLTF
+    const glassesScene = glassesGltf.scene
+    const phoneScene = phoneGltf.scene
+    const robotScene = robotGltf.scene
+
+    if (!glassesScene || !phoneScene || !robotScene) {
+      console.warn("DomainDevices3D: Missing one or more device models")
       return
     }
 
@@ -492,19 +506,16 @@ function DomainDevices3D({ domainDeviceData }: { domainDeviceData: any[] | null 
       const appName = deviceData.name
       
       if (!pose) {
-        console.log(`DomainDevices3D: Device ${deviceId} doesn't contain pose information`, deviceData)
+        console.warn(`DomainDevices3D: Device ${deviceId} doesn't contain pose information`)
         return
       }
-
-      console.log(`DomainDevices3D: Updating device position for ${deviceId} (${deviceType})`, pose)
-      setLastUpdate(new Date().toISOString())
       
       let model = modelsRef.current.get(deviceId)
       
       // Create new model if it doesn't exist
       if (!model) {
         // Choose the appropriate model based on device type
-        let sourceScene
+        let sourceScene: THREE.Group
         let scale = new THREE.Vector3(0.5, 0.5, 0.5)
         
         switch (deviceType) {
@@ -514,17 +525,34 @@ function DomainDevices3D({ domainDeviceData }: { domainDeviceData: any[] | null 
             break
           case 'padbot-robot-w3':
             sourceScene = robotScene
-            scale.set(1, 1, 1) // Robot model is larger, so we scale it down more
+            scale.set(1, 1, 1)
             break
           default:
             sourceScene = glassesScene
-            scale.set(0.5, 0.5, 0.5)
+            scale.set(1.5, 1.5, 1.5)  // Increased from 0.5 to 1.5 (3x larger)
         }
         
         model = sourceScene.clone()
         model.scale.copy(scale)
+        
+        // Position new models directly at their target position - no initial lerp needed
+        if (matrixFromPose(pose, matrix)) {
+          // For new models, set the position directly - skip lerping for first position
+          matrix.decompose(model.position, model.quaternion, model.scale)
+          // Override scale with our device-specific scale
+          model.scale.copy(scale)
+          
+          // Apply device-specific rotation
+          applyDeviceRotation(model, deviceType)
+        }
+        
         scene.add(model)
         modelsRef.current.set(deviceId, model)
+        
+        // Store device type for later reference
+        model.userData.deviceType = deviceType
+        // Flag this as an initialized model that should lerp in future updates
+        model.userData.isInitialized = true;
 
         // Add a debug sphere
         const debugSphere = new THREE.Mesh(
@@ -532,83 +560,133 @@ function DomainDevices3D({ domainDeviceData }: { domainDeviceData: any[] | null 
           new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true })
         )
         debugSphere.userData.isDebugSphere = true
+        
+        // Apply inverse scaling to the debug sphere to maintain consistent size
+        const inverseScale = new THREE.Vector3(
+          1 / scale.x,
+          1 / scale.y,
+          1 / scale.z
+        )
+        debugSphere.scale.copy(inverseScale)
+        
+        // Hide the debug sphere
+        debugSphere.visible = false
+        
         model.add(debugSphere)
 
         // Create logo quad if texture is loaded
         if (appName && textures.has(appName)) {
-          createLogoQuad(model, deviceId, textures.get(appName)!)
+          createLogoQuad(model, appName, textures.get(appName)!, scale)
+        }
+        
+        // Add text label for glasses models
+        if (deviceType === 'glasses') {
+          addTextLabel(model, scale);
         }
       } else if (appName && textures.has(appName) && !model.userData.logoQuad) {
-        createLogoQuad(model, deviceId, textures.get(appName)!)
+        // For existing models, get scale from current model
+        createLogoQuad(model, appName, textures.get(appName)!, model.scale)
       }
       
-      // Update pose
+      // Set target transform for lerping
       if (matrixFromPose(pose, matrix)) {
-        matrix.decompose(model.position, model.quaternion, model.scale)
+        // Decompose the matrix into position, quaternion, and scale
+        matrix.decompose(tempPosition, tempQuaternion, tempScale)
         
-        // Re-apply scale based on device type
-        switch (deviceType) {
-          case 'phone':
-            model.scale.set(0.5, 0.5, 0.5)
-            break
-          case 'padbot-robot-w3':
-            model.scale.set(1, 1, 1)
-            break
-          default:
-            model.scale.set(0.5, 0.5, 0.5)
-        }
+        // Get the scale based on device type (don't use tempScale from the matrix)
+        const deviceScale = getScaleForDeviceType(deviceType)
         
-        // Only rotate glasses model
-        if (deviceType === 'glasses') {
-          model.rotateY(-Math.PI / 2)
-        }
-        else if (deviceType === 'padbot-robot-w3') {
-          model.rotateX(-Math.PI / 2)
-          model.rotateZ(Math.PI / 2)
-        }
+        // Store starting values based on current model state
+        const startPosition = model.position.clone();
+        const startQuaternion = model.quaternion.clone();
+        const startScale = model.scale.clone();
+
+        // For debugging
+        console.log(`Setting lerp for ${deviceId}:`);
+        console.log(`  Start: ${startPosition.x.toFixed(2)},${startPosition.y.toFixed(2)},${startPosition.z.toFixed(2)}`);
+        console.log(`  End:   ${tempPosition.x.toFixed(2)},${tempPosition.y.toFixed(2)},${tempPosition.z.toFixed(2)}`);
+        console.log(`  Distance: ${startPosition.distanceTo(tempPosition).toFixed(2)} units`);
         
-        console.log(`Device position updated for ${deviceId}: ${model.position.x.toFixed(2)}, ${model.position.y.toFixed(2)}, ${model.position.z.toFixed(2)}`)
+        // Only start lerping if there's a significant change in position or rotation
+        // AND if the model has been initialized (not first creation)
+        const positionChanged = startPosition.distanceTo(tempPosition) > 0.001;
+        const quaternionChanged = (1 - Math.abs(startQuaternion.dot(tempQuaternion))) > 0.001;
+        const scaleChanged = !startScale.equals(deviceScale);
+        
+        console.log(`Changes detected - position: ${positionChanged}, rotation: ${quaternionChanged}, scale: ${scaleChanged}`);
+        
+        // Always lerp for existing models, they should transition to new positions smoothly
+        if (positionChanged || quaternionChanged || scaleChanged) {
+          console.log(`Starting lerp animation for ${deviceId}`);
+          
+          // Store the current state as starting point for lerping
+          // and the target state to lerp toward
+          targetTransforms.current.set(deviceId, {
+            // Target transform (destination)
+            position: tempPosition.clone(),
+            quaternion: tempQuaternion.clone(),
+            scale: deviceScale.clone(),
+            
+            // Starting transform (where the animation begins) - use current model state
+            startPosition: startPosition,
+            startQuaternion: startQuaternion,
+            startScale: startScale,
+            startTime: Date.now()
+          });
+          
+          // Indicate that we need to lerp in the animation frame
+          lerpingActive.current = true;
+          setLastUpdate(new Date().toISOString());
+        }
       }
-    })
+    });
 
     // Clean up removed devices
     modelsRef.current.forEach((model, id) => {
       if (!domainDeviceData.find(d => (d.device_id || `device_${domainDeviceData.indexOf(d)}`) === id)) {
         scene.remove(model)
-        model.traverse((object) => {
-          if (object instanceof THREE.Mesh) {
-            if (object.geometry) object.geometry.dispose()
-            if (object.material instanceof THREE.Material) {
-              object.material.dispose()
-            } else if (Array.isArray(object.material)) {
-              object.material.forEach(material => material.dispose())
-            }
-          }
-        })
+        disposeModel(model)
         modelsRef.current.delete(id)
+        targetTransforms.current.delete(id)
       }
-    })
+    });
 
     return () => {
       modelsRef.current.forEach((model) => {
         scene.remove(model)
-        model.traverse((object) => {
-          if (object instanceof THREE.Mesh) {
-            if (object.geometry) object.geometry.dispose()
-            if (object.material instanceof THREE.Material) {
-              object.material.dispose()
-            } else if (Array.isArray(object.material)) {
-              object.material.forEach(material => material.dispose())
-            }
-          }
-        })
+        disposeModel(model)
       })
       modelsRef.current.clear()
+      targetTransforms.current.clear()
     }
-  }, [glassesScene, phoneScene, robotScene, scene, domainDeviceData, textures])
+  }, [domainDeviceData, textures, scene, glassesGltf, phoneGltf, robotGltf, matrix, tempPosition, tempQuaternion, tempScale])
+
+  // Helper function to get scale based on device type
+  const getScaleForDeviceType = (deviceType: string): THREE.Vector3 => {
+    switch (deviceType) {
+      case 'phone':
+        return new THREE.Vector3(0.5, 0.5, 0.5)
+      case 'padbot-robot-w3':
+        return new THREE.Vector3(1, 1, 1)
+      default:
+        return new THREE.Vector3(1.5, 1.5, 1.5)  // Increased from 0.5 to 1.5 (3x larger)
+    }
+  }
+  
+  // Helper function to apply device-specific rotations
+  const applyDeviceRotation = (model: THREE.Group, deviceType: string) => {
+    // Apply device-specific rotations
+    if (deviceType === 'glasses') {
+      // No rotation for glasses
+    }
+    else if (deviceType === 'padbot-robot-w3') {
+      model.rotateX(-Math.PI / 2)
+      model.rotateZ(Math.PI / 2)
+    }
+  }
 
   // Helper function to create the logo quad
-  const createLogoQuad = (parentModel: THREE.Group, deviceId: string, texture: THREE.Texture) => {
+  const createLogoQuad = (parentModel: THREE.Group, appName: string, texture: THREE.Texture, parentScale: THREE.Vector3) => {
     const imageAspectRatio = texture.image.width / texture.image.height
     const logoHeight = 0.25
     const logoWidth = logoHeight * imageAspectRatio
@@ -622,40 +700,148 @@ function DomainDevices3D({ domainDeviceData }: { domainDeviceData: any[] | null 
     })
 
     const logoQuad = new THREE.Mesh(logoGeometry, logoMaterial)
-    logoQuad.position.set(0, 0.75, 0)
+    logoQuad.position.set(0.1, 0.03, 0)
     logoQuad.rotation.x = -Math.PI / 2
+    
+    // Apply inverse scaling to the logo to maintain consistent size
+    logoQuad.scale.set(
+      0.3 / parentScale.x,
+      0.3 / parentScale.y,
+      0.3 / parentScale.z
+    )
     
     parentModel.add(logoQuad)
     parentModel.userData.logoQuad = logoQuad
   }
 
-  // Display update indicator
+  // Helper function to add text label to glasses
+  const addTextLabel = (parentModel: THREE.Group, parentScale: THREE.Vector3) => {
+    // Create text mesh using drei's Text component
+    const textGroup = new THREE.Group();
+    
+    // Create text material with wider canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;  // Increased from 256 to 512 for more space
+    canvas.height = 128;
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.fillStyle = 'rgba(0, 0, 0, 0)';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.font = 'bold 20px Arial';  // Reduced font size slightly
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillStyle = '#00FF00';
+      context.fillText('Powered by AugmentOS', canvas.width/2, canvas.height/2 - 15);
+      context.fillText('and Auki Network', canvas.width/2, canvas.height/2 + 15);
+    }
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    
+    // Use a wider geometry to match the new canvas aspect ratio
+    const geometry = new THREE.PlaneGeometry(2, 0.5);  // Made wider
+    const textMesh = new THREE.Mesh(geometry, material);
+    
+    // Set the fixed position offset relative to the glasses model
+    textMesh.position.set(-0.01, 0.037, -0.01);
+    
+    // Rotate the text 90 degrees around the Y axis
+    textMesh.rotation.z = Math.PI / 2; // 90 degrees in radians
+    
+    // Apply inverse scaling to maintain consistent size, but scale down
+    textMesh.scale.set(
+      0.04 / parentScale.x,  // Adjusted scale
+      -0.04 / parentScale.y,
+      0.04 / parentScale.z
+    );
+    
+    textGroup.add(textMesh);
+    parentModel.add(textGroup);
+    parentModel.userData.textLabel = textGroup;
+  }
+
+  // Perform lerping in animation frame
   useFrame(({ camera }) => {
-    if (lastUpdate) {
-      const timeSinceUpdate = Date.now() - new Date(lastUpdate).getTime()
-      if (timeSinceUpdate < 1000) {
-        // More subtle flash effect using opacity
-        const flash = 0.5 + 0.5 * Math.sin(timeSinceUpdate / 200)
-        modelsRef.current.forEach((model) => {
-          model.traverse((object) => {
-            if (object instanceof THREE.Mesh && 
-                object.material instanceof THREE.MeshBasicMaterial && 
-                !object.userData.isLogo && 
-                !object.userData.isDebugSphere) {
-              object.material.opacity = flash
-              object.material.transparent = true
-            }
-          })
-        })
-      }
+    const currentTime = Date.now()
+    
+    // Check if we have any transforms to lerp
+    const hasTransformsToLerp = targetTransforms.current.size > 0;
+    
+    // Update lerping active state if there are transforms
+    if (hasTransformsToLerp) {
+      lerpingActive.current = true;
+    }
+    
+    // Perform lerping for all models with target transforms
+    if (lerpingActive.current) {
+      let stillLerping = false
       
-      // Make all logo quads face the camera
-      modelsRef.current.forEach((model) => {
-        if (model.userData.logoQuad) {
-          model.userData.logoQuad.lookAt(camera.position)
+      modelsRef.current.forEach((model, deviceId) => {
+        const targetData = targetTransforms.current.get(deviceId)
+        
+        if (targetData) {
+          const deviceType = model.userData.deviceType || 'glasses'
+          
+          // Calculate how far along the lerp we should be (0 to 1)
+          const elapsedTime = currentTime - targetData.startTime
+          const t = Math.min(elapsedTime / LERP_DURATION, 1.0)
+          
+          // For debugging, log progress occasionally
+          if (elapsedTime % 500 < 16) { // Log every half second
+            console.log(`Lerping ${deviceId}: t=${t.toFixed(2)}, elapsed=${elapsedTime}ms of ${LERP_DURATION}ms`);
+            console.log(`  pos: ${model.position.x.toFixed(2)},${model.position.y.toFixed(2)},${model.position.z.toFixed(2)} -> ${targetData.position.x.toFixed(2)},${targetData.position.y.toFixed(2)},${targetData.position.z.toFixed(2)}`);
+          }
+          
+          if (t < 1.0) {
+            // We're still lerping
+            stillLerping = true
+            
+            // Lerp position 
+            model.position.lerpVectors(targetData.startPosition, targetData.position, t)
+            
+            // Slerp quaternion - this handles orientation
+            model.quaternion.slerpQuaternions(targetData.startQuaternion, targetData.quaternion, t)
+            
+            // Lerp scale
+            model.scale.lerpVectors(targetData.startScale, targetData.scale, t)
+          } else {
+            // We've finished lerping, set final values
+            model.position.copy(targetData.position)
+            model.quaternion.copy(targetData.quaternion)
+            model.scale.copy(targetData.scale)
+            
+            // Remove this from target transforms
+            targetTransforms.current.delete(deviceId);
+          }
+          
+          // Apply device-specific rotations after lerping the base transformation
+          // But first, reset rotation to avoid accumulation
+          model.rotation.set(0, 0, 0);
+          applyDeviceRotation(model, deviceType);
         }
       })
+      
+      // Only set to false if there are no remaining transforms to lerp
+      stillLerping = targetTransforms.current.size > 0;
+      lerpingActive.current = stillLerping
+      
+      // Debug logging when lerping stops
+      if (!stillLerping && hasTransformsToLerp) {
+        console.log('All lerping animations completed');
+      }
     }
+    
+    // Make all logo quads face the camera (but not text labels)
+    modelsRef.current.forEach((model) => {
+      if (model.userData.logoQuad) {
+        model.userData.logoQuad.lookAt(camera.position)
+      }
+    })
   })
 
   return null
@@ -683,21 +869,45 @@ export default function Viewer3D({
         <color attach="background" args={["#131313"]} />
         <ambientLight intensity={0.5} />
         <directionalLight intensity={0.5} position={[10, 100, 10]} />
+        
+        {/* Static elements */}
         <CustomGrid />
-        {pointCloudVisible && pointCloudData && <PointCloud data={pointCloudData} />}
-        {portalsVisible && <Portals portals={portals} />}
-        {occlusionVisible && <OcclusionMesh occlusionMeshData={occlusionMeshData} />}
-        {navMeshVisible && <NavMesh navMeshData={navMeshData} />}
-        {scan3DVisible && <Scan3D />}
-        {domainDeviceData && <DomainDevices3D domainDeviceData={domainDeviceData} />}
+        
+        {/* Conditional rendering based on visibility flags */}
+        {pointCloudVisible && pointCloudData && (
+          <PointCloud data={pointCloudData} />
+        )}
+        
+        {portalsVisible && portals && (
+          <Portals portals={portals} />
+        )}
+        
+        {occlusionVisible && occlusionMeshData && (
+          <OcclusionMesh occlusionMeshData={occlusionMeshData} />
+        )}
+        
+        {navMeshVisible && navMeshData && (
+          <NavMesh navMeshData={navMeshData} />
+        )}
+        
+        {scan3DVisible && (
+          <Scan3D />
+        )}
+        
+        {domainDeviceData && (
+          <DomainDevices3D domainDeviceData={domainDeviceData} />
+        )}
+        
         <CameraController pointCloudData={pointCloudData} />
       </Canvas>
     </div>
   )
 }
 
+// Preload all GLTF models
 useGLTF.preload('/QR.glb')
-useGLTF.preload('/L10CommonSpace.glb')
+// useGLTF.preload('/L10CommonSpace.glb')
+useGLTF.preload('/lounge.glb')
 useGLTF.preload('/glasses.glb')
 useGLTF.preload('/smartphone.glb')
 useGLTF.preload('/padbot-robot-w3.glb')
