@@ -29,11 +29,13 @@ export default function DomainPage({ params }: { params: { id: string } }) {
   const [occlusionMeshData, setOcclusionMeshData] = useState<ArrayBuffer | null>(null)
   const [domainDeviceData, setDomainDeviceData] = useState<any[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [portalsVisible, setPortalsVisible] = useState(true)
-  const [navMeshVisible, setNavMeshVisible] = useState(true)
-  const [occlusionVisible, setOcclusionVisible] = useState(true)
-  const [pointCloudVisible, setPointCloudVisible] = useState(true)
-  const [scan3DVisible, setScane3DVisible] = useState(true)
+  const [visibilityFlags, setVisibilityFlags] = useState({
+    portals: true,
+    navMesh: true,
+    occlusion: true,
+    pointCloud: true,
+    scane3D: true,
+  })
   
   // Create a single instance of PosemeshClientApi
   const clientApiRef = useRef<PosemeshClientApi | null>(null)
@@ -292,6 +294,26 @@ export default function DomainPage({ params }: { params: { id: string } }) {
     // Intentionally empty as data loading is handled by useEffect
   }
 
+  const handlePortalsToggle = () => {
+    setVisibilityFlags(prev => ({ ...prev, portals: !prev.portals }))
+  }
+
+  const handleNavMeshToggle = () => {
+    setVisibilityFlags(prev => ({ ...prev, navMesh: !prev.navMesh }))
+  }
+
+  const handleOcclusionToggle = () => {
+    setVisibilityFlags(prev => ({ ...prev, occlusion: !prev.occlusion }))
+  }
+
+  const handlePointCloudToggle = () => {
+    setVisibilityFlags(prev => ({ ...prev, pointCloud: !prev.pointCloud }))
+  }
+  
+  const handleScan3DToggle = () => {
+    setVisibilityFlags(prev => ({ ...prev, scane3D: !prev.scane3D }))
+  }
+
   return (
     <div className="relative h-screen w-full overflow-hidden bg-[#282828]">
       <Viewer3D 
@@ -299,29 +321,37 @@ export default function DomainPage({ params }: { params: { id: string } }) {
         portals={portals} 
         occlusionMeshData={occlusionMeshData}
         navMeshData={navMeshData}
-        portalsVisible={portalsVisible}
-        navMeshVisible={navMeshVisible}
-        occlusionVisible={occlusionVisible}
-        pointCloudVisible={pointCloudVisible}
-        scan3DVisible={scan3DVisible}
+        portalsVisible={visibilityFlags.portals}
+        navMeshVisible={visibilityFlags.navMesh}
+        occlusionVisible={visibilityFlags.occlusion}
+        pointCloudVisible={visibilityFlags.pointCloud}
+        scan3DVisible={visibilityFlags.scane3D}
         domainDeviceData={domainDeviceData}
       />
       <Navbar onDomainInfoLoaded={handleDomainInfoLoaded} currentDomainId={params.id} isLoading={isLoading} />
-      {domainData && (
-        <DomainInfo 
-          domainInfo={domainData.domainInfo} 
-          onTogglePortals={() => setPortalsVisible(!portalsVisible)}
-          portalsVisible={portalsVisible}
-          onToggleNavMesh={() => setNavMeshVisible(!navMeshVisible)}
-          navMeshVisible={navMeshVisible}
-          onToggleOcclusion={() => setOcclusionVisible(!occlusionVisible)}
-          occlusionVisible={occlusionVisible}
-          onTogglePointCloud={() => setPointCloudVisible(!pointCloudVisible)}
-          pointCloudVisible={pointCloudVisible}
-          onToggleScan3D={() => setScane3DVisible(!scan3DVisible)}
-          scan3DVisible={scan3DVisible}
+      <div className="w-1/4 p-4 bg-gray-800 text-white overflow-y-auto">
+        <DomainInfo
+          domainInfo={{
+            id: params.id,
+            name: domainData?.domainInfo?.user_given_name || "",
+            url: domainData?.domainServerUrl || "", // Assuming domainServerUrl can be used for url
+            createdAt: domainData?.domainInfo?.created_at || new Date().toISOString(), // Or some other default/fallback
+            updatedAt: domainData?.domainInfo?.updated_at || new Date().toISOString(), // Or some other default/fallback
+            // description: domainData?.domainInfo?.description, // Not in DomainInfoProps
+            // tags: domainData?.domainInfo?.tags?.join(", ") || "", // Not in DomainInfoProps
+          }}
+          portalsVisible={visibilityFlags.portals}
+          navMeshVisible={visibilityFlags.navMesh}
+          occlusionVisible={visibilityFlags.occlusion}
+          pointCloudVisible={visibilityFlags.pointCloud}
+          scan3DVisible={visibilityFlags.scane3D}
+          onTogglePortals={handlePortalsToggle}
+          onToggleNavMesh={handleNavMeshToggle}
+          onToggleOcclusion={handleOcclusionToggle}
+          onTogglePointCloud={handlePointCloudToggle}
+          onToggleScan3D={handleScan3DToggle}
         />
-      )}
+      </div>
       <div className="absolute bottom-4 right-4">
         <Image
           src="/images/logo.svg"
