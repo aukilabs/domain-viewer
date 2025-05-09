@@ -462,6 +462,9 @@ function DomainDevices3D({ domainDeviceData }: { domainDeviceData: DeviceData[] 
         textureLoader.current.load(
           `/images/${appName}.png`,
           (texture) => {
+            // Set correct color space for the texture
+            texture.colorSpace = THREE.SRGBColorSpace
+            
             setTextures(prev => {
               const newTextures = new Map(prev)
               newTextures.set(appName, texture)
@@ -535,6 +538,38 @@ function DomainDevices3D({ domainDeviceData }: { domainDeviceData: DeviceData[] 
         model = sourceScene.clone()
         model.scale.copy(scale)
         
+        // Apply unlit materials to all device models, not just glasses
+        model.traverse((object) => {
+          if (object instanceof THREE.Mesh && object.material) {
+            // Get the original material's color and texture
+            const originalMaterial = object.material instanceof THREE.Material 
+              ? object.material 
+              : object.material[0]
+            
+            const color = originalMaterial.color ? originalMaterial.color.clone() : new THREE.Color(0xFFFFFF)
+            const map = originalMaterial.map || null
+            
+            // Create and apply unlit material
+            const unlitMaterial = new THREE.MeshBasicMaterial({
+              color: color,
+              map: map,
+              transparent: originalMaterial.transparent || false,
+              opacity: originalMaterial.opacity || 1.0,
+              side: originalMaterial.side || THREE.FrontSide
+            })
+            
+            if (Array.isArray(object.material)) {
+              const materials = []
+              for (let i = 0; i < object.material.length; i++) {
+                materials.push(unlitMaterial.clone())
+              }
+              object.material = materials
+            } else {
+              object.material = unlitMaterial
+            }
+          }
+        })
+        
         // Position new models directly at their target position - no initial lerp needed
         if (matrixFromPose(pose, matrix)) {
           // For new models, set the position directly - skip lerping for first position
@@ -563,9 +598,9 @@ function DomainDevices3D({ domainDeviceData }: { domainDeviceData: DeviceData[] 
         
         // Apply inverse scaling to the debug sphere to maintain consistent size
         const inverseScale = new THREE.Vector3(
-          1 / scale.x,
-          1 / scale.y,
-          1 / scale.z
+          0.2 / scale.x,
+          0.2 / scale.y,
+          0.2 / scale.z
         )
         debugSphere.scale.copy(inverseScale)
         
@@ -680,8 +715,8 @@ function DomainDevices3D({ domainDeviceData }: { domainDeviceData: DeviceData[] 
       // No rotation for glasses
     }
     else if (deviceType === 'padbot-robot-w3') {
-      model.rotateX(-Math.PI / 2)
-      model.rotateZ(Math.PI / 2)
+      // model.rotateX(-Math.PI / 2)
+      // model.rotateZ(Math.PI / 2)
     }
   }
 
@@ -696,18 +731,22 @@ function DomainDevices3D({ domainDeviceData }: { domainDeviceData: DeviceData[] 
       map: texture,
       transparent: true,
       side: THREE.DoubleSide,
-      alphaTest: 0.1
+      alphaTest: 0.1,
+      // Don't premultiply alpha to preserve color integrity
+      premultipliedAlpha: false,
+      // Use correct color management
+      toneMapped: false
     })
 
     const logoQuad = new THREE.Mesh(logoGeometry, logoMaterial)
-    logoQuad.position.set(0.1, 0.03, 0)
+    logoQuad.position.set(0.1, 1.3, 0)
     logoQuad.rotation.x = -Math.PI / 2
     
     // Apply inverse scaling to the logo to maintain consistent size
     logoQuad.scale.set(
-      0.3 / parentScale.x,
-      0.3 / parentScale.y,
-      0.3 / parentScale.z
+      0.6 / parentScale.x,
+      0.6 / parentScale.y,
+      0.6 / parentScale.z
     )
     
     parentModel.add(logoQuad)
@@ -736,11 +775,17 @@ function DomainDevices3D({ domainDeviceData }: { domainDeviceData: DeviceData[] 
     }
     
     const texture = new THREE.CanvasTexture(canvas);
+    // Set correct color space
+    texture.colorSpace = THREE.SRGBColorSpace;
+    
     const material = new THREE.MeshBasicMaterial({
       map: texture,
       transparent: true,
       depthWrite: false,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
+      // Add color management settings
+      toneMapped: false,
+      premultipliedAlpha: false
     });
     
     // Use a wider geometry to match the new canvas aspect ratio
@@ -865,7 +910,15 @@ export default function Viewer3D({
 }: Viewer3DProps) {
   return (
     <div className="w-full h-full bg-[#131313]">
-      <Canvas camera={{ position: [15, 15, 15], fov: 50 }}>
+      <Canvas 
+        camera={{ position: [15, 15, 15], fov: 50 }}
+        gl={{ 
+          // Enable proper color rendering
+          outputColorSpace: THREE.SRGBColorSpace,
+          // Enable proper alpha blending for textures
+          premultipliedAlpha: false
+        }}
+      >
         <color attach="background" args={["#131313"]} />
         <ambientLight intensity={0.5} />
         <directionalLight intensity={0.5} position={[10, 100, 10]} />
@@ -890,9 +943,9 @@ export default function Viewer3D({
           <NavMesh navMeshData={navMeshData} />
         )}
         
-        {scan3DVisible && (
+        {/* {scan3DVisible && (
           <Scan3D />
-        )}
+        )} */}
         
         {domainDeviceData && (
           <DomainDevices3D domainDeviceData={domainDeviceData} />
@@ -907,7 +960,7 @@ export default function Viewer3D({
 // Preload all GLTF models
 useGLTF.preload('/QR.glb')
 // useGLTF.preload('/L10CommonSpace.glb')
-useGLTF.preload('/lounge.glb')
+// useGLTF.preload('/lounge.glb')
 useGLTF.preload('/glasses.glb')
 useGLTF.preload('/smartphone.glb')
 useGLTF.preload('/padbot-robot-w3.glb')
