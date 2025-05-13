@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
 import type React from "react"
+import {DomainCluster, RemoteDatastore, Query} from "posemesh-domain";
 
 interface NavbarProps {
   onDomainInfoLoaded: (domainInfo: any, pointCloudData: ArrayBuffer | null) => void
@@ -17,6 +18,10 @@ export default function Navbar({ onDomainInfoLoaded, currentDomainId, isLoading 
   const [domainId, setDomainId] = useState(currentDomainId || "")
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const domainStorage = useMemo(() => {
+    const domainCluster = new DomainCluster(process.env.NEXT_PUBLIC_DOMAIN_MANAGER_ADDRESS || "", process.env.NEXT_PUBLIC_APP_ID || "", null, null);
+    return new RemoteDatastore(domainCluster);
+  }, [process.env.NEXT_PUBLIC_DOMAIN_MANAGER_ADDRESS, process.env.NEXT_PUBLIC_APP_ID]);
 
   useEffect(() => {
     if (currentDomainId) {
@@ -111,4 +116,3 @@ export default function Navbar({ onDomainInfoLoaded, currentDomainId, isLoading 
     </nav>
   )
 }
-
