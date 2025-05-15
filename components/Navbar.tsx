@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
 import type React from "react"
-import {DomainCluster, RemoteDatastore, Query} from "posemesh-domain";
+import {DomainCluster, RemoteDatastore, Query} from "@aukilabs/posemesh-domain";
 
 interface NavbarProps {
   onDomainInfoLoaded: (domainInfo: any, pointCloudData: ArrayBuffer | null) => void

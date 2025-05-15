@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@aukilabs/posemesh-domain": "^0.1.0",
     "@radix-ui/react-collapsible": "^1.1.2",
     "@radix-ui/react-slot": "^1.1.1",
     "@react-three/drei": "^9.102.3",
@@ -25,7 +26,6 @@
     "next": "14.2.16",
     "next-themes": "^0.4.4",
     "parse-multipart-data": "latest",
-    "posemesh-domain": "^0.1.0",
     "react": "^18",
     "react-dom": "^18",
     "react-native": "latest",
