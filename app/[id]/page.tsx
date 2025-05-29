@@ -88,7 +88,17 @@ export default function DomainPage({ params }: { params: { id: string } }) {
           domainData.domainAccessToken,
         )
         
-        const newDomainDeviceData = JSON.parse(new TextDecoder().decode(domainDeviceBuffer))
+        const textData = new TextDecoder().decode(domainDeviceBuffer)
+        console.log(`[${new Date().toISOString()}] Raw device data for polling item ${domainDeviceItemId}:`, textData.substring(0, 100) + (textData.length > 100 ? '...' : ''))
+        
+        let newDomainDeviceData
+        try {
+          newDomainDeviceData = JSON.parse(textData)
+        } catch (parseError) {
+          console.error(`[${new Date().toISOString()}] Failed to parse JSON for polling device item ${domainDeviceItemId}:`, parseError)
+          console.error(`[${new Date().toISOString()}] Raw polling data:`, textData)
+          return // Exit early if we can't parse the data
+        }
         
         // Check if the data is recent (less than 5 seconds old)
         const currentTime = Date.now()
@@ -211,7 +221,18 @@ export default function DomainPage({ params }: { params: { id: string } }) {
               item.id,
               data.domainAccessToken,
             )
-            return JSON.parse(new TextDecoder().decode(domainDeviceBuffer))
+            
+            // Add debugging to see what we're trying to parse
+            const textData = new TextDecoder().decode(domainDeviceBuffer)
+            console.log(`[${new Date().toISOString()}] Raw device data for item ${item.id}:`, textData.substring(0, 100) + (textData.length > 100 ? '...' : ''))
+            
+            try {
+              return JSON.parse(textData)
+            } catch (parseError) {
+              console.error(`[${new Date().toISOString()}] Failed to parse JSON for device item ${item.id}:`, parseError)
+              console.error(`[${new Date().toISOString()}] Raw data:`, textData)
+              throw parseError
+            }
           })
         )
         
@@ -263,21 +284,29 @@ export default function DomainPage({ params }: { params: { id: string } }) {
           data.domainAccessToken,
         )
         
-        const metadata = JSON.parse(new TextDecoder().decode(domainMetadata))
-        if (metadata.canonicalRefinement) {
-          const pointCloudItem = domainData.find((item: any) => item.data_type === "refined_pointcloud_ply" && item.name === `refined_pointcloud_${metadata.canonicalRefinement}`)
-          if (pointCloudItem) {
-            const pointCloudBuffer = await clientApiRef.current.downloadFile(
-              data.domainServerUrl,
-              data.domainInfo.id,
-              pointCloudItem.id,
-              data.domainAccessToken,
-            )
-            setPointCloudData(pointCloudBuffer)
+        try {
+          const metadataText = new TextDecoder().decode(domainMetadata)
+          console.log(`[${new Date().toISOString()}] Raw metadata:`, metadataText.substring(0, 100) + (metadataText.length > 100 ? '...' : ''))
+          const metadata = JSON.parse(metadataText)
+          if (metadata.canonicalRefinement) {
+            const pointCloudItem = domainData.find((item: any) => item.data_type === "refined_pointcloud_ply" && item.name === `refined_pointcloud_${metadata.canonicalRefinement}`)
+            if (pointCloudItem) {
+              const pointCloudBuffer = await clientApiRef.current.downloadFile(
+                data.domainServerUrl,
+                data.domainInfo.id,
+                pointCloudItem.id,
+                data.domainAccessToken,
+              )
+              setPointCloudData(pointCloudBuffer)
+            }
+            else {
+              console.log(`[${new Date().toISOString()}] No point cloud data found for this domain`)
+            }
           }
-          else {
-            console.log(`[${new Date().toISOString()}] No point cloud data found for this domain`)
-          }
+        } catch (metadataError) {
+          console.error(`[${new Date().toISOString()}] Failed to parse domain metadata JSON:`, metadataError)
+          const metadataText = new TextDecoder().decode(domainMetadata)
+          console.error(`[${new Date().toISOString()}] Raw metadata data:`, metadataText)
         }
       } else {
         console.log(`[${new Date().toISOString()}] No domain matedata found for this domain`)
