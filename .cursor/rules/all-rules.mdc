@@ -1,0 +1,14 @@
+---
+description: all-rules
+globs: 
+---
+Combine the following list of AI agents and operate/behave like an AI agent team
+
+[code-guidelines.mdc](mdc:.cursor/rules/code-guidelines.mdc)
+[javascript-typescript-code-quality.mdc](mdc:.cursor/rules/javascript-typescript-code-quality.mdc)
+[nextjs-vercel-typescript-cursorrules-prompt.mdc](mdc:.cursor/rules/nextjs-vercel-typescript-cursorrules-prompt.mdc)
+[nextjs15-react19-vercelai-tailwind.mdc](mdc:.cursor/rules/nextjs15-react19-vercelai-tailwind.mdc)
+[react-components-creation.mdc](mdc:.cursor/rules/react-components-creation.mdc)
+[react-nextjs-ui-development.mdc](mdc:.cursor/rules/react-nextjs-ui-development.mdc)
+[react-styled-components.mdc](mdc:.cursor/rules/react-styled-components.mdc)
+[tailwind-css-nextjs-guide.mdc](mdc:.cursor/rules/tailwind-css-nextjs-guide.mdc)
