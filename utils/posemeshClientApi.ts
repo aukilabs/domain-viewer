@@ -67,12 +67,35 @@ class PosemeshClientApi {
    * @param domainServerUrl - Base URL of the domain server
    * @param domainId - Unique identifier of the domain
    * @param accessToken - Authentication token for the domain
+   * @param filters - Optional filters for the data
+   * @param filters.name - Filter by data name (optional)
+   * @param filters.data_type - Filter by data type (optional)
    * @returns Array of domain data objects
    */
-  async fetchDomainData(domainServerUrl: string, domainId: string, accessToken: string) {
+  async fetchDomainData(
+    domainServerUrl: string, 
+    domainId: string, 
+    accessToken: string,
+    filters?: {
+      name?: string;
+      data_type?: string;
+    }
+  ) {
     console.log(`[${new Date().toISOString()}] Fetching domain data`)
     try {
-      const response = await fetch(`${domainServerUrl}/api/v1/domains/${domainId}/data`, {
+      // Build query parameters
+      const queryParams = new URLSearchParams();
+      if (filters?.name) {
+        queryParams.append('name', filters.name);
+      }
+      if (filters?.data_type) {
+        queryParams.append('data_type', filters.data_type);
+      }
+      
+      const queryString = queryParams.toString();
+      const url = `${domainServerUrl}/api/v1/domains/${domainId}/data${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "User-Agent": "domain-viewer",

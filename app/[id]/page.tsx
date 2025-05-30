@@ -207,7 +207,11 @@ export default function DomainPage({ params }: { params: { id: string } }) {
       }
 
       // Load domain device data
-      const domainDeviceItems = domainData.filter((item: any) => item.data_type === "reported_pose_json")
+      const outdated_threshold = new Date(Date.now() - 30 * 1000)
+      const domainDeviceItems = domainData.filter((item: any) => 
+        item.data_type === "reported_pose_json" &&
+        new Date(item.updated_at) > outdated_threshold
+      )
       console.log(`[${new Date().toISOString()}] Found ${domainDeviceItems.length} domain device items`)
       if (domainDeviceItems.length > 0) {
         const domainDeviceDataArray = await Promise.all(
@@ -238,41 +242,51 @@ export default function DomainPage({ params }: { params: { id: string } }) {
         
         console.log(`[${new Date().toISOString()}] Domain device data loaded successfully:`, domainDeviceDataArray)
         setDomainDeviceData(domainDeviceDataArray)
-        
-        // Set up polling for device data updates
-        console.log("Setting up device data polling interval")
-        pollingIntervalRef.current = setInterval(async () => {
-          console.log("Polling interval triggered")
-          try {
-            if (!clientApiRef.current) {
-              console.error("API client not initialized")
-              return
-            }
-            
-            // Fetch all domain data to get current list of reported_pose_json items
-            const currentDomainData = await clientApiRef.current.fetchDomainData(
-              data.domainServerUrl,
-              data.domainInfo.id, 
-              data.domainAccessToken
-            )
-            
-            // Filter for reported_pose_json items
-            const currentDomainDeviceItems = currentDomainData.filter((item: any) => item.data_type === "reported_pose_json")
-            
-            // Fetch data for each item
-            await Promise.all(
-              currentDomainDeviceItems.map(async (item: { id: string }) => {
-                await fetchDomainDeviceData(clientApiRef.current, data, item.id)
-              })
-            )
-          } catch (error) {
-            console.error("Error during polling:", error)
-          }
-        }, 1000)
       }
       else {
         console.log(`[${new Date().toISOString()}] No domain device data found for this domain`)
       }
+
+      // Set up polling for device data updates
+      console.log("Setting up device data polling interval")
+      if(pollingIntervalRef.current == null)
+      {
+        pollingIntervalRef.current = setInterval(async () => {
+        console.log("Polling interval triggered")
+        try {
+          if (!clientApiRef.current) {
+            console.error("API client not initialized")
+            return
+          }
+          
+          // Fetch only reported_pose_json data type (device position data) from server
+          const currentDomainData = await clientApiRef.current.fetchDomainData(
+            data.domainServerUrl,
+            data.domainInfo.id, 
+            data.domainAccessToken,
+            { data_type: "reported_pose_json" }
+          )
+          
+          // const outdated_threshold = new Date(Date.now() - 30000000 * 1000)
+          const outdated_threshold = new Date(Date.now() - 30 * 1000)
+
+          // Filter for reported_pose_json items
+          const currentDomainDeviceItems = currentDomainData.filter((item: any) => 
+            item.data_type === "reported_pose_json" &&
+            new Date(item.updated_at) > outdated_threshold
+          )
+
+          // Fetch data for each item
+          await Promise.all(
+            currentDomainDeviceItems.map(async (item: { id: string }) => {
+              await fetchDomainDeviceData(clientApiRef.current, data, item.id)
+            })
+          )
+        } catch (error) {
+          console.error("Error during polling:", error)
+        }
+      }, 1000)
+    }
 
       // Load point cloud
       const domainMetadataItem = domainData.find((item: any) => item.name === "domain_metadata")
