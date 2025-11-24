@@ -3,13 +3,16 @@
 import { plyAsyncParse } from "@/utils/ply-parser.web";
 import type { Portal } from "@/utils/posemeshClientApi";
 import { matrixFromPose } from "@/utils/three-utils";
-import { OrbitControls, useGLTF } from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
-import { CustomGrid } from "./CustomGrid";
+import { FloorGrid } from "./3d/FloorGrid";
+import { PersistedMapControls } from "./PersistedMapControls";
+import FPSControls from "./FPSControls";
+import OriginLines from "./3d/OriginLines";
+import SkyBox from "./SkyBox";
 
 interface Viewer3DProps {
   pointCloudData: ArrayBuffer | null;
@@ -218,10 +221,10 @@ function CameraController({
   pointCloudData: ArrayBuffer | null;
 }) {
   const { camera } = useThree();
-  const controlsRef = useRef<OrbitControlsImpl>(null);
   const [isIdle, setIsIdle] = useState(false);
   const lastInteractionTime = useRef(Date.now());
   const animationRef = useRef<number | null>(null);
+  const angleRef = useRef<number>(0);
 
   const resetIdleTimer = () => {
     lastInteractionTime.current = Date.now();
@@ -230,28 +233,19 @@ function CameraController({
     }
   };
 
-  const startOrbitAnimation = () => {
-    if (controlsRef.current && !animationRef.current) {
-      const animate = () => {
-        if (controlsRef.current) {
-          controlsRef.current.autoRotate = true;
-          controlsRef.current.update();
-        }
-        animationRef.current = requestAnimationFrame(animate);
-      };
-      animate();
-    }
-  };
-
-  const stopOrbitAnimation = () => {
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      animationRef.current = null;
-    }
-    if (controlsRef.current) {
-      controlsRef.current.autoRotate = false;
-    }
-  };
+  useEffect(() => {
+    const reset = () => resetIdleTimer();
+    window.addEventListener("pointerdown", reset);
+    window.addEventListener("wheel", reset, { passive: true } as any);
+    window.addEventListener("keydown", reset);
+    window.addEventListener("touchstart", reset, { passive: true } as any);
+    return () => {
+      window.removeEventListener("pointerdown", reset);
+      window.removeEventListener("wheel", reset as any);
+      window.removeEventListener("keydown", reset);
+      window.removeEventListener("touchstart", reset as any);
+    };
+  }, [isIdle]);
 
   useFrame(() => {
     if (
@@ -260,7 +254,16 @@ function CameraController({
       Date.now() - lastInteractionTime.current > 5000
     ) {
       setIsIdle(true);
-      startOrbitAnimation();
+    }
+    if (isIdle) {
+      angleRef.current += 0.0015;
+      const radius = new THREE.Vector3(camera.position.x, 0, camera.position.z).length();
+      const y = camera.position.y;
+      const x = Math.cos(angleRef.current) * Math.max(5, radius);
+      const z = Math.sin(angleRef.current) * Math.max(5, radius);
+      camera.position.set(x, y, z);
+      camera.lookAt(0, 0, 0);
+      camera.updateProjectionMatrix();
     }
   });
 
@@ -272,28 +275,9 @@ function CameraController({
     };
   }, []);
 
-  const handleStart = () => {
-    resetIdleTimer();
-    stopOrbitAnimation();
-  };
-
-  const handleEnd = () => {
-    resetIdleTimer();
-  };
-
   return (
-    <OrbitControls
-      ref={controlsRef}
-      minPolarAngle={0}
-      maxPolarAngle={Math.PI / 2}
-      makeDefault
-      autoRotateSpeed={0.5}
-      enableDamping={true}
-      dampingFactor={0.05}
-      onStart={handleStart}
-      onEnd={handleEnd}
-      onChange={resetIdleTimer}
-    />
+    // We attach handlers via PersistedMapControls in the main component
+    null
   );
 }
 
@@ -436,13 +420,26 @@ export default function Viewer3D({
   pointCloudVisible = true,
   alignmentMatrix,
 }: Viewer3DProps) {
+  const [controlMode, setControlMode] = useState<"map" | "fps">("map");
+  const fpsStart = useMemo<[number, number, number]>(() => [0, 1.8, 3], []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === "KeyF") {
+        setControlMode((m) => (m === "map" ? "fps" : "map"));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
-    <div className="w-full h-full bg-[#131313]">
-      <Canvas camera={{ position: [15, 15, 15], fov: 50 }}>
-        <color attach="background" args={["#131313"]} />
+    <div className="w-full h-full bg-neutral-50 dark:bg-neutral-900">
+      <Canvas camera={{ position: [15, 15, 15], fov: 50 }} gl={{ alpha: true }}>
         <ambientLight intensity={0.5} />
         <directionalLight intensity={0.5} position={[10, 100, 10]} />
-        <CustomGrid />
+        <OriginLines />
+        <FloorGrid />
         {pointCloudVisible && pointCloudData && (
           <PointCloud
             data={pointCloudData}
@@ -454,6 +451,23 @@ export default function Viewer3D({
           <OcclusionMesh occlusionMeshData={occlusionMeshData} />
         )}
         {navMeshVisible && <NavMesh navMeshData={navMeshData} />}
+        {controlMode === "fps" ? (
+          <>
+            <SkyBox />
+            <FPSControls start={fpsStart} makeDefault onExit={() => setControlMode("map")} />
+          </>
+        ) : (
+          <PersistedMapControls
+            makeDefault
+            minPolarAngle={0}
+            maxPolarAngle={Math.PI / 2}
+            enableDamping={true}
+            dampingFactor={0.05}
+            onStart={() => {}}
+            onEnd={() => {}}
+            onChange={() => {}}
+          />
+        )}
         <CameraController pointCloudData={pointCloudData} />
       </Canvas>
     </div>

@@ -50,7 +50,7 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 ├── components/ # React components
 │ ├── ui/ # Common reusable UI components
 │ │ ├── button.tsx
-│ │ ├── collapsable.tsx # Modal dialog component
+│ │ ├── collapsible.tsx # Radix Collapsible primitives
 │ │ └── input.tsx # Form input component
 │ ├── CustomGrid.tsx # Custom grid component for the ground plane
 │ ├── DomainInfo.tsx # Domain metadata display panel
@@ -58,8 +58,7 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 │ ├── ToggleVisibility.tsx # Layer visibility controls
 │ └── Viewer3D.tsx # Main 3D visualization component
 ├── utils/ # Utility functions
-│ ├── fetchIpInfo.ts # Utility function to fetch location information from IP using  API from https://ipinfo.io/
-│ ├── plotly-utils.ts # Utility functions for parsing a domain point cloud
+│ ├── ply-parser.web.ts # PLY parsing with optional Web Worker
 │ ├── posemeshClientApi.ts # Frontend API client
 │ ├── posemeshServerApi.ts # Backend API client
 │ └── three-utils.ts # Three.js helper functions
@@ -69,7 +68,12 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 │ └── QR.glb # A 3D model of a QR code (i.e. a portal)
 ├── lib/ # Shared libraries and configurations
 │ └── utils.ts # Common utility functions
-├── .env.template # Environment variables template
+├── charts/ # Helm chart for Kubernetes deployments
+│ └── domain-viewer/
+│   ├── Chart.yaml
+│   ├── values.yaml
+│   ├── values.staging.yaml
+│   └── values.prod.yaml
 └── package.json # Project configuration
 ```
 
@@ -98,10 +102,12 @@ cd domain-viewer
 npm install
 ```
 
-3. Create a `.env.local` file in the root directory with your credentials from https://console.auki.network:
+3. Create a `.env.local` file in the root directory with your credentials and servers:
 ```bash
 AUKI_APP_KEY=your_app_key_here
 AUKI_APP_SECRET=your_app_secret_here
+AUKI_API_SERVER=https://api.auki.network         # or your provided API server
+AUKI_DDS_SERVER=https://dds.auki.network         # or your provided DDS server
 ```
 
 4. Run the development server:
@@ -120,7 +126,7 @@ git clone git@github.com:aukilabs/domain-viewer.git
 cd domain-viewer
 ```
 
-2. Create a `.env.local` file with your Auki credentials as shown above.
+2. Create a `.env.local` file with your Auki credentials and servers as shown above.
 
 3. Build and run with Docker Compose:
 ```bash

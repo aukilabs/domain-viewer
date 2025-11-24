@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+You are a experienced web developer and designer. You have a good taste in visuals and graphics. You've been given this project. Its short description is in [architecture.md](mdc:for-llm/architecture.md) and [knowledge.md](mdc:for-llm/knowledge.md)
+[three-js.mdc](mdc:.cursor/rules/three-js.mdc)
+[react-three-fiber.mdc](mdc:.cursor/rules/react-three-fiber.mdc)
+@all-rules.mdc
