@@ -33,14 +33,26 @@ class PosemeshServerApi {
           "Authorization": `Basic ${basic}`,
           "User-Agent": "domain-viewer",
           "posemesh-client-id": this.posemeshClientId,
+          "Accept": "application/json",
         }
       });
+
+      if (!request.ok) {
+        const raw = await request.text().catch(() => "");
+        let message = raw;
+        try {
+          const json = JSON.parse(raw);
+          message = json.message || raw;
+        } catch {}
+        throw new Error(`Auth failed (${request.status}): ${message || request.statusText}`)
+      }
+
       const response = await request.json();
       this.accessToken = response.access_token;
       console.log("Authentication response:", JSON.stringify(response, null, 2))
     } catch (error) {
       console.error("Authentication failed:", error)
-      throw new Error("Authentication failed")
+      throw new Error(error instanceof Error ? error.message : "Authentication failed")
     }
   }
 
@@ -59,8 +71,20 @@ class PosemeshServerApi {
           "Content-Type": "application/json",
           "User-Agent": "domain-viewer",
           "posemesh-client-id": this.posemeshClientId,
+          "Accept": "application/json",
         }
       });
+
+      if (!request.ok) {
+        const raw = await request.text().catch(() => "");
+        let message = raw;
+        try {
+          const json = JSON.parse(raw);
+          message = json.message || raw;
+        } catch {}
+        throw new Error(`Domain auth failed (${request.status}): ${message || request.statusText}`)
+      }
+
       const response = await request.json();
       this.domainAccessToken = response.access_token;
       this.domainServerUrl = response.domain_server.url;
@@ -68,7 +92,7 @@ class PosemeshServerApi {
       return response;
     } catch (error) {
       console.error("Domain authentication failed:", error)
-      throw new Error("Domain authentication failed")
+      throw new Error(error instanceof Error ? error.message : "Domain authentication failed")
     }
   }
 }

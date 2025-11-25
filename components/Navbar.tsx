@@ -5,7 +5,6 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useRouter } from "next/navigation"
-import { useTheme } from "next-themes"
 import type React from "react"
 
 interface NavbarProps {
@@ -18,7 +17,6 @@ export default function Navbar({ onDomainInfoLoaded, currentDomainId, isLoading 
   const [domainId, setDomainId] = useState(currentDomainId || "")
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
-  const { resolvedTheme, setTheme } = useTheme()
 
   useEffect(() => {
     if (currentDomainId) {
@@ -83,16 +81,6 @@ export default function Navbar({ onDomainInfoLoaded, currentDomainId, isLoading 
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-8"
-          aria-label="Toggle theme"
-          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-        >
-          {resolvedTheme === "dark" ? "Light" : "Dark"}
-        </Button>
         {isLoading && (
           <div className="flex items-center gap-3 bg-[#282828]/80 px-4 py-2 rounded-full">
             <div className="relative h-5 w-5">

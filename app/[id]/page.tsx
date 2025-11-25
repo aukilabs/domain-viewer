@@ -1,218 +1,64 @@
-"use client";
-
+import { Metadata } from "next";
 import { fetchDomainInfo } from "@/app/actions";
-import DomainInfo from "@/components/DomainInfo";
-import Navbar from "@/components/Navbar";
-import Viewer3D from "@/components/Viewer3D";
-import PosemeshClientApi, { Portal } from "@/utils/posemeshClientApi";
-import Image from "next/image";
-import { useEffect, useState } from "react";
+import ClientPage from "./ClientPage";
 
-export const maxDuration = 60;
-
-interface DomainData {
-  domainInfo: any;
-  domainAccessToken: string;
-  domainServerUrl: string;
+interface Props {
+    params: {
+        id: string;
+    };
 }
 
-/**
- * Main domain viewer page component that handles loading and displaying domain data.
- * This component manages the state for all domain-related data including point clouds,
- * portals, navigation meshes, and occlusion meshes.
- */
-export default function DomainPage({ params }: { params: { id: string } }) {
-  const [domainData, setDomainData] = useState<DomainData | null>(null);
-  const [pointCloudData, setPointCloudData] = useState<ArrayBuffer | null>(
-    null
-  );
-  const [portals, setPortals] = useState<Portal[] | null>(null);
-  const [navMeshData, setNavMeshData] = useState<ArrayBuffer | null>(null);
-  const [occlusionMeshData, setOcclusionMeshData] =
-    useState<ArrayBuffer | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [portalsVisible, setPortalsVisible] = useState(true);
-  const [navMeshVisible, setNavMeshVisible] = useState(true);
-  const [occlusionVisible, setOcclusionVisible] = useState(true);
-  const [pointCloudVisible, setPointCloudVisible] = useState(true);
-  const [alignmentMatrix, setAlignmentMatrix] = useState<number[] | null>(null);
-  console.log("alignmentMatrix111", alignmentMatrix);
-  useEffect(() => {
-    loadAllDomainData(params.id);
-  }, [params.id]);
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+    const domainId = params.id;
+    // Use a temporary client ID for metadata fetching
+    const posemeshClientId = "metadata-fetcher-" + Math.random().toString(36).substring(7);
 
-  /**
-   * Loads all domain data for a given domain ID including:
-   * - Domain information and access tokens
-   * - Portal locations
-   * - Navigation mesh
-   * - Occlusion mesh
-   * - Point cloud data
-   *
-   * @param domainId - The unique identifier for the domain to load
-   */
-  const loadAllDomainData = async (domainId: string) => {
-    setIsLoading(true);
-    try {
-      const clientApi = new PosemeshClientApi();
+    const result = await fetchDomainInfo(domainId, posemeshClientId);
 
-      // First, get domain info
-      const result = await fetchDomainInfo(
-        domainId,
-        clientApi.posemeshClientId
-      );
-      if (!result.success || !result.data) {
-        throw new Error(result.error || "Failed to fetch domain info");
-      }
+    if (result.success && result.data) {
+        const { domainInfo } = result.data;
+        const title = `Domain: ${domainInfo.name || domainId}`;
+        const description = `Click to see the ${domainInfo.name || domainId} through the eyes of AI`;
 
-      const data = result.data;
-      setDomainData(data);
-
-      // Get domain portals
-      const portals = await clientApi.fetchDomainPortals(
-        data.domainServerUrl,
-        data.domainInfo.id,
-        data.domainAccessToken
-      );
-      setPortals(portals);
-
-      // Get domain all domain data info
-      const domainData = await clientApi.fetchDomainData(
-        data.domainServerUrl,
-        data.domainInfo.id,
-        data.domainAccessToken
-      );
-
-      // Load navigation mesh
-      const navMeshItem = domainData.find(
-        (item: any) => item.data_type === "obj" && item.name === "navmesh_v1"
-      );
-      if (navMeshItem) {
-        const navMeshBuffer = await clientApi.downloadFile(
-          data.domainServerUrl,
-          data.domainInfo.id,
-          navMeshItem.id,
-          data.domainAccessToken
-        );
-        setNavMeshData(navMeshBuffer);
-      } else {
-        console.log(
-          `[${new Date().toISOString()}] No navigation mesh data found for this domain`
-        );
-      }
-
-      // Load occlusion mesh
-      const occlusionMeshItem = domainData.find(
-        (item: any) =>
-          item.data_type === "obj" && item.name === "occlusionmesh_v1"
-      );
-      if (occlusionMeshItem) {
-        const occlusionMeshBuffer = await clientApi.downloadFile(
-          data.domainServerUrl,
-          data.domainInfo.id,
-          occlusionMeshItem.id,
-          data.domainAccessToken
-        );
-        setOcclusionMeshData(occlusionMeshBuffer);
-      } else {
-        console.log(
-          `[${new Date().toISOString()}] No occlusion mesh data found for this domain`
-        );
-      }
-
-      // Load point cloud
-      const domainMetadataItem = domainData.find(
-        (item: any) => item.name === "domain_metadata"
-      );
-      if (domainMetadataItem) {
-        const domainMetadata = await clientApi.downloadFile(
-          data.domainServerUrl,
-          data.domainInfo.id,
-          domainMetadataItem.id,
-          data.domainAccessToken
-        );
-
-        const metadata = JSON.parse(new TextDecoder().decode(domainMetadata));
-        console.log("metadata", metadata);
-        setAlignmentMatrix(metadata.canonicalRefinementAlignmentMatrix);
-        if (metadata.canonicalRefinement) {
-          const pointCloudItem = domainData.find(
-            (item: any) =>
-              item.data_type === "refined_pointcloud_ply" &&
-              item.name === `refined_pointcloud_${metadata.canonicalRefinement}`
-          );
-          if (pointCloudItem) {
-            const pointCloudBuffer = await clientApi.downloadFile(
-              data.domainServerUrl,
-              data.domainInfo.id,
-              pointCloudItem.id,
-              data.domainAccessToken
-            );
-            setPointCloudData(pointCloudBuffer);
-          } else {
-            console.log(
-              `[${new Date().toISOString()}] No point cloud data found for this domain`
-            );
-          }
-        }
-      } else {
-        console.log(
-          `[${new Date().toISOString()}] No domain matedata found for this domain`
-        );
-      }
-    } catch (error) {
-      console.error("Error loading domain data:", error);
-    } finally {
-      setIsLoading(false);
+        return {
+            title,
+            description,
+            openGraph: {
+                title,
+                description,
+                images: [
+                    {
+                        url: "/images/og-image.png", // We could potentially generate a dynamic image here later
+                        width: 1200,
+                        height: 630,
+                        alt: `3D visualization of domain ${domainInfo.name}`,
+                    },
+                ],
+            },
+            twitter: {
+                card: "player",
+                site: "@solar_axons",
+                title,
+                description,
+                images: ["/images/og-image.png"],
+                players: [
+                    {
+                        playerUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://preview-on-x.ngrok.app'}/${domainId}`,
+                        streamUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://preview-on-x.ngrok.app'}/${domainId}`,
+                        width: 1200,
+                        height: 630,
+                    },
+                ],
+            },
+        };
     }
-  };
 
-  // This function is now only used for navigation
-  const handleDomainInfoLoaded = () => {
-    // Intentionally empty as data loading is handled by useEffect
-  };
+    return {
+        title: "Auki Domain Viewer",
+        description: "View and analyze spatial domain information in 3D",
+    };
+}
 
-  return (
-    <div className="relative h-screen w-full overflow-hidden bg-[#282828]">
-      <Viewer3D
-        pointCloudData={pointCloudData}
-        portals={portals}
-        occlusionMeshData={occlusionMeshData}
-        navMeshData={navMeshData}
-        portalsVisible={portalsVisible}
-        navMeshVisible={navMeshVisible}
-        occlusionVisible={occlusionVisible}
-        pointCloudVisible={pointCloudVisible}
-        alignmentMatrix={alignmentMatrix}
-      />
-      <Navbar
-        onDomainInfoLoaded={handleDomainInfoLoaded}
-        currentDomainId={params.id}
-        isLoading={isLoading}
-      />
-      {domainData && (
-        <DomainInfo
-          domainInfo={domainData.domainInfo}
-          onTogglePortals={() => setPortalsVisible(!portalsVisible)}
-          portalsVisible={portalsVisible}
-          onToggleNavMesh={() => setNavMeshVisible(!navMeshVisible)}
-          navMeshVisible={navMeshVisible}
-          onToggleOcclusion={() => setOcclusionVisible(!occlusionVisible)}
-          occlusionVisible={occlusionVisible}
-          onTogglePointCloud={() => setPointCloudVisible(!pointCloudVisible)}
-          pointCloudVisible={pointCloudVisible}
-        />
-      )}
-      <div className="absolute bottom-4 right-4">
-        <Image
-          src="/images/logo.svg"
-          alt="Auki Logo"
-          width={48}
-          height={76}
-          priority
-          className="w-[48px] h-[76px] opacity-60"
-        />
-      </div>
-    </div>
-  );
+export default function Page({ params }: Props) {
+    return <ClientPage params={params} />;
 }

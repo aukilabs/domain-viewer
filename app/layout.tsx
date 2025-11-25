@@ -7,14 +7,14 @@ import { ThemeProvider } from "@/components/theme-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Auki spatial domain viewer",
-  description: "View and analyze spatial domain information in 3D",
+  title: "Real world web domain viewer",
+  description: "See the world through the eyes of AI",
   icons: {
     icon: "/images/favicon.png",
   },
   openGraph: {
-    title: "Auki spatial domain viewer",
-    description: "View and analyze spatial domain information in 3D",
+    title: "Real world web domain viewer",
+    description: "See the world through the eyes of AI",
     images: [
       {
         url: "/images/og-image.png",
@@ -26,11 +26,12 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Auki spatial domain viewer",
-    description: "View and analyze spatial domain information in 3D",
+    title: "Real world web domain viewer",
+    description: "See the world through the eyes of AI",
     images: ["/images/og-image.png"],
   },
-    generator: 'v0.dev'
+  generator: 'v0.dev',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://preview-on-x.ngrok.app'),
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

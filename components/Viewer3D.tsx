@@ -220,17 +220,16 @@ function CameraController({
 }: {
   pointCloudData: ArrayBuffer | null;
 }) {
-  const { camera } = useThree();
+  const { camera, controls } = useThree();
   const [isIdle, setIsIdle] = useState(false);
   const lastInteractionTime = useRef(Date.now());
   const animationRef = useRef<number | null>(null);
   const angleRef = useRef<number>(0);
+  const targetRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
 
   const resetIdleTimer = () => {
     lastInteractionTime.current = Date.now();
-    if (isIdle) {
-      setIsIdle(false);
-    }
+    setIsIdle(false);
   };
 
   useEffect(() => {
@@ -245,7 +244,7 @@ function CameraController({
       window.removeEventListener("keydown", reset);
       window.removeEventListener("touchstart", reset as any);
     };
-  }, [isIdle]);
+  }, []);
 
   useFrame(() => {
     if (
@@ -253,16 +252,27 @@ function CameraController({
       !isIdle &&
       Date.now() - lastInteractionTime.current > 5000
     ) {
+      // Get the current target from MapControls
+      const target = (controls as any)?.target || new THREE.Vector3(0, 0, 0);
+      targetRef.current.copy(target);
+
+      // Calculate the current angle from camera position relative to target
+      const offsetX = camera.position.x - targetRef.current.x;
+      const offsetZ = camera.position.z - targetRef.current.z;
+      const currentAngle = Math.atan2(offsetZ, offsetX);
+      angleRef.current = currentAngle;
       setIsIdle(true);
     }
     if (isIdle) {
       angleRef.current += 0.0015;
-      const radius = new THREE.Vector3(camera.position.x, 0, camera.position.z).length();
+      const offsetX = camera.position.x - targetRef.current.x;
+      const offsetZ = camera.position.z - targetRef.current.z;
+      const radius = Math.sqrt(offsetX * offsetX + offsetZ * offsetZ);
       const y = camera.position.y;
-      const x = Math.cos(angleRef.current) * Math.max(5, radius);
-      const z = Math.sin(angleRef.current) * Math.max(5, radius);
+      const x = targetRef.current.x + Math.cos(angleRef.current) * Math.max(5, radius);
+      const z = targetRef.current.z + Math.sin(angleRef.current) * Math.max(5, radius);
       camera.position.set(x, y, z);
-      camera.lookAt(0, 0, 0);
+      camera.lookAt(targetRef.current);
       camera.updateProjectionMatrix();
     }
   });
@@ -380,6 +390,9 @@ function NavMesh({ navMeshData }: { navMeshData: ArrayBuffer | null }) {
             transparent: true,
             opacity: 0.9,
             side: THREE.DoubleSide,
+            polygonOffset: true,
+            polygonOffsetFactor: -1,
+            polygonOffsetUnits: -1,
           })
         );
         group.add(mesh);
@@ -463,9 +476,9 @@ export default function Viewer3D({
             maxPolarAngle={Math.PI / 2}
             enableDamping={true}
             dampingFactor={0.05}
-            onStart={() => {}}
-            onEnd={() => {}}
-            onChange={() => {}}
+            onStart={() => { }}
+            onEnd={() => { }}
+            onChange={() => { }}
           />
         )}
         <CameraController pointCloudData={pointCloudData} />
