@@ -1,5 +1,5 @@
 k8s-service:
   containerImage:
-    tag: 13b58d3ceef69c83109fe07a24df415eeba564df
+    tag: 9b6e0ccc459480558ce39abb5c0cd4161c85c4ed
     pullPolicy: IfNotPresent
   replicaCount: 2
