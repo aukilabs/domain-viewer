@@ -217,8 +217,10 @@ function Portals({ portals = [] }: { portals: Portal[] | null | undefined }) {
  */
 function CameraController({
   pointCloudData,
+  controlMode,
 }: {
   pointCloudData: ArrayBuffer | null;
+  controlMode: "map" | "fps";
 }) {
   const { camera, controls } = useThree();
   const [isIdle, setIsIdle] = useState(false);
@@ -226,11 +228,33 @@ function CameraController({
   const animationRef = useRef<number | null>(null);
   const angleRef = useRef<number>(0);
   const targetRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
+  const previousControlMode = useRef(controlMode);
 
   const resetIdleTimer = () => {
     lastInteractionTime.current = Date.now();
     setIsIdle(false);
   };
+
+  useEffect(() => {
+    // When switching from FPS to Map mode, we need to ensure the camera is upright
+    // and looking at a valid target for the MapControls to work properly
+    if (previousControlMode.current === "fps" && controlMode === "map") {
+      // Reset camera up vector to ensure it's not tilted
+      camera.up.set(0, 1, 0);
+
+      // Calculate a target point in front of the camera
+      const direction = new THREE.Vector3();
+      camera.getWorldDirection(direction);
+      const target = new THREE.Vector3().copy(camera.position).add(direction.multiplyScalar(10));
+
+      // Update the controls target if available
+      if (controls && (controls as any).target) {
+        (controls as any).target.copy(target);
+        (controls as any).update();
+      }
+    }
+    previousControlMode.current = controlMode;
+  }, [controlMode, camera, controls]);
 
   useEffect(() => {
     const reset = () => resetIdleTimer();
@@ -247,6 +271,12 @@ function CameraController({
   }, []);
 
   useFrame(() => {
+    // Disable auto-rotation in FPS mode
+    if (controlMode === "fps") {
+      lastInteractionTime.current = Date.now();
+      return;
+    }
+
     if (
       pointCloudData &&
       !isIdle &&
@@ -432,19 +462,26 @@ export default function Viewer3D({
   occlusionVisible = true,
   pointCloudVisible = true,
   alignmentMatrix,
-}: Viewer3DProps) {
+  isEmbed = false,
+}: Viewer3DProps & { isEmbed?: boolean }) {
   const [controlMode, setControlMode] = useState<"map" | "fps">("map");
   const fpsStart = useMemo<[number, number, number]>(() => [0, 1.8, 3], []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === "KeyF") {
-        setControlMode((m) => (m === "map" ? "fps" : "map"));
+      if (e.code === "KeyF" && !isEmbed) {
+        setControlMode((m) => {
+          if (m === "fps") {
+            document.exitPointerLock();
+            return "map";
+          }
+          return "fps";
+        });
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [isEmbed]);
 
   return (
     <div className="w-full h-full bg-neutral-50 dark:bg-neutral-900">
@@ -466,7 +503,7 @@ export default function Viewer3D({
         {navMeshVisible && <NavMesh navMeshData={navMeshData} />}
         {controlMode === "fps" ? (
           <>
-            <SkyBox />
+            {/* SkyBox removed to preserve color theme */}
             <FPSControls start={fpsStart} makeDefault onExit={() => setControlMode("map")} />
           </>
         ) : (
@@ -481,7 +518,7 @@ export default function Viewer3D({
             onChange={() => { }}
           />
         )}
-        <CameraController pointCloudData={pointCloudData} />
+        <CameraController pointCloudData={pointCloudData} controlMode={controlMode} />
       </Canvas>
     </div>
   );

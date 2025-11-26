@@ -192,6 +192,7 @@ export default function DomainPage({ params, hideUI = false }: { params: { id: s
         occlusionVisible={occlusionVisible}
         pointCloudVisible={pointCloudVisible}
         alignmentMatrix={alignmentMatrix}
+        isEmbed={isInIframe}
       />
       {!hideUI && !isInIframe && (
         <>

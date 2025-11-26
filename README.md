@@ -24,6 +24,8 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 - Portal location markers
 - Visibility toggles for different data layers
 - Auto-rotating camera when idle
+- **FPS Camera Mode (First Person View)**
+- **Persisted Camera State**
 - Responsive grid system with infinite ground plane
 - Domain information display with copy-to-clipboard functionality
 
@@ -37,6 +39,7 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 - Tailwind CSS
 - Radix UI Components
 - Lucide Icons
+- **Jotai (State Management)**
 
 ## Project Structure
 ```
@@ -48,15 +51,24 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 │ ├── layout.tsx # Root layout component
 │ └── page.tsx # Home page
 ├── components/ # React components
+│ ├── 3d/ # 3D specific components
+│ │ ├── FloorGrid.tsx # Infinite grid component
+│ │ └── OriginLines.tsx # XYZ axis lines
 │ ├── ui/ # Common reusable UI components
 │ │ ├── button.tsx
 │ │ ├── collapsible.tsx # Radix Collapsible primitives
 │ │ └── input.tsx # Form input component
-│ ├── CustomGrid.tsx # Custom grid component for the ground plane
 │ ├── DomainInfo.tsx # Domain metadata display panel
+│ ├── FPSControls.tsx # First person camera controls
 │ ├── Navbar.tsx # The top navigation bar component with domain id input field
+│ ├── PersistedMapControls.tsx # Map controls with state persistence
+│ ├── SkyBox.tsx # Skybox environment
 │ ├── ToggleVisibility.tsx # Layer visibility controls
 │ └── Viewer3D.tsx # Main 3D visualization component
+├── hooks/ # Custom React hooks
+│ └── useColorScheme.ts # Theme detection hook
+├── store/ # Global state management
+│ └── camera-store.ts # Camera position and target state
 ├── utils/ # Utility functions
 │ ├── ply-parser.web.ts # PLY parsing with optional Web Worker
 │ ├── posemeshClientApi.ts # Frontend API client
@@ -160,8 +172,9 @@ docker compose build
    - Left click + drag to rotate
    - Right click + drag to pan
    - Scroll to zoom
-4. Toggle visibility of different layers using the buttons in the bottom left panel
-5. View domain details in the expandable panel
+4. **Press 'F' to toggle FPS camera mode (WASD to move, Mouse to look)**
+5. Toggle visibility of different layers using the buttons in the bottom left panel
+6. View domain details in the expandable panel
 
 ## Contributing
 

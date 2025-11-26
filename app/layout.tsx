@@ -8,30 +8,28 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Real world web domain viewer",
-  description: "See the world through the eyes of AI",
+  description: "RWW domain visualizer",
   icons: {
     icon: "/images/favicon.png",
   },
   openGraph: {
     title: "Real world web domain viewer",
-    description: "See the world through the eyes of AI",
+    description: "RWW domain visualizer",
     images: [
       {
         url: "/images/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Auki domain viewer interface showing a 3D point cloud visualization",
+        alt: "Auki domain viewer",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Real world web domain viewer",
-    description: "See the world through the eyes of AI",
+    title: "Real World Web domain viewer",
+    description: "Click to view this RWW domain",
     images: ["/images/og-image.png"],
   },
-  generator: 'v0.dev',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://preview-on-x.ngrok.app'),
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

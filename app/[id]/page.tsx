@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { fetchDomainInfo } from "@/app/actions";
 import ClientPage from "./ClientPage";
+import { headers } from "next/headers";
 
 interface Props {
     params: {
@@ -15,10 +16,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     const result = await fetchDomainInfo(domainId, posemeshClientId);
 
+    // Compute absolute base URL from incoming request headers
+    const h = headers();
+    const proto = h.get("x-forwarded-proto") ?? "https";
+    const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+    const baseUrl = `${proto}://${host}`;
+
     if (result.success && result.data) {
         const { domainInfo } = result.data;
         const title = `Domain: ${domainInfo.name || domainId}`;
-        const description = `Click to see the ${domainInfo.name || domainId} through the eyes of AI`;
+        const description = `Click to see this Real World Web domain`;
 
         return {
             title,
@@ -37,14 +44,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             },
             twitter: {
                 card: "player",
-                site: "@solar_axons",
+                site: "@Auki",
                 title,
                 description,
                 images: ["/images/og-image.png"],
                 players: [
                     {
-                        playerUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://preview-on-x.ngrok.app'}/${domainId}`,
-                        streamUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://preview-on-x.ngrok.app'}/${domainId}`,
+                        playerUrl: `${baseUrl}/${domainId}`,
+                        streamUrl: `${baseUrl}/${domainId}`,
                         width: 1200,
                         height: 630,
                     },
@@ -54,8 +61,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
 
     return {
-        title: "Auki Domain Viewer",
-        description: "View and analyze spatial domain information in 3D",
+        title: "Real World Web domain viewer",
+        description: "RWW domain visualizer",
     };
 }
 
