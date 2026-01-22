@@ -22,18 +22,24 @@ interface DomainInfoProps {
   occlusionVisible: boolean
   onTogglePointCloud: () => void
   pointCloudVisible: boolean
+  onToggleSplat: () => void
+  splatVisible: boolean
+  hasSplat: boolean
 }
 
-export default function DomainInfo({ 
-  domainInfo, 
-  onTogglePortals, 
+export default function DomainInfo({
+  domainInfo,
+  onTogglePortals,
   portalsVisible,
   onToggleNavMesh,
   navMeshVisible,
   onToggleOcclusion,
   occlusionVisible,
   onTogglePointCloud,
-  pointCloudVisible
+  pointCloudVisible,
+  onToggleSplat,
+  splatVisible,
+  hasSplat
 }: DomainInfoProps) {
   const [isDetailsOpen, setIsDetailsOpen] = useState(true)
 
@@ -47,11 +53,11 @@ export default function DomainInfo({
   }
 
   return (
-    <div className="fixed inset-4 top-24 w-full overflow-y-auto space-y-2 font-sans md:fixed md:left-4 md:bottom-4 md:w-[400px] md:top-auto">
+    <div className="fixed inset-4 top-24 w-full overflow-y-auto space-y-2 font-sans md:fixed md:left-4 md:bottom-4 md:w-[400px] md:top-auto pointer-events-none">
       <Collapsible
         open={isDetailsOpen}
         onOpenChange={setIsDetailsOpen}
-        className="rounded-xl bg-[#282828] p-4 space-y-4"
+        className="rounded-xl bg-[#282828] p-4 space-y-4 pointer-events-auto"
       >
         <CollapsibleTrigger className="flex w-full items-center justify-between sticky top-0 bg-[#282828] py-2 z-10">
           <h2 className="text-[#fafafa] text-base sm:text-xl font-medium">Domain details</h2>
@@ -154,8 +160,8 @@ export default function DomainInfo({
           </div>
         </CollapsibleContent>
       </Collapsible>
-      <Collapsible className="rounded-xl bg-[#282828] p-4">
-        <ToggleVisibility 
+      <Collapsible className="rounded-xl bg-[#282828] p-4 pointer-events-auto">
+        <ToggleVisibility
           onTogglePortals={onTogglePortals}
           portalsVisible={portalsVisible}
           onToggleNavMesh={onToggleNavMesh}
@@ -164,6 +170,9 @@ export default function DomainInfo({
           occlusionVisible={occlusionVisible}
           onTogglePointCloud={onTogglePointCloud}
           pointCloudVisible={pointCloudVisible}
+          onToggleSplat={onToggleSplat}
+          splatVisible={splatVisible}
+          hasSplat={hasSplat}
         />
       </Collapsible>
     </div>

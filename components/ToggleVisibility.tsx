@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronDown, Cloud, QrCode, Map, Box } from "lucide-react"
+import { ChevronDown, Cloud, QrCode, Map, Box, Sparkles } from "lucide-react"
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -14,6 +14,9 @@ interface ToggleVisibilityProps {
   occlusionVisible: boolean
   onTogglePointCloud: () => void
   pointCloudVisible: boolean
+  onToggleSplat: () => void
+  splatVisible: boolean
+  hasSplat: boolean
 }
 
 export function ToggleVisibility({ 
@@ -24,9 +27,30 @@ export function ToggleVisibility({
   onToggleOcclusion,
   occlusionVisible,
   onTogglePointCloud,
-  pointCloudVisible
+  pointCloudVisible,
+  onToggleSplat,
+  splatVisible,
+  hasSplat
 }: ToggleVisibilityProps) {
   const [isOpen, setIsOpen] = React.useState(false)
+
+  // Build toggle buttons array dynamically
+  const toggleButtons = [
+    { icon: QrCode, label: "Toggle Portals", visible: portalsVisible, onClick: onTogglePortals },
+    { icon: Map, label: "Toggle Navigation Mesh", visible: navMeshVisible, onClick: onToggleNavMesh },
+    { icon: Box, label: "Toggle Occlusion", visible: occlusionVisible, onClick: onToggleOcclusion },
+    { icon: Cloud, label: "Toggle Point Cloud", visible: pointCloudVisible, onClick: onTogglePointCloud },
+  ]
+
+  // Add splat button only if splat data exists
+  if (hasSplat) {
+    toggleButtons.push({
+      icon: Sparkles,
+      label: "Toggle Gaussian Splat",
+      visible: splatVisible,
+      onClick: onToggleSplat,
+    })
+  }
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -36,12 +60,7 @@ export function ToggleVisibility({
       </CollapsibleTrigger>
       <CollapsibleContent className="pt-2">
         <div className="grid grid-cols-4 gap-2 sm:flex sm:gap-2">
-          {[
-            { icon: QrCode, label: "Toggle Portals", visible: portalsVisible, onClick: onTogglePortals },
-            { icon: Map, label: "Toggle Navigation Mesh", visible: navMeshVisible, onClick: onToggleNavMesh },
-            { icon: Box, label: "Toggle Occlusion", visible: occlusionVisible, onClick: onToggleOcclusion },
-            { icon: Cloud, label: "Toggle Point Cloud", visible: pointCloudVisible, onClick: onTogglePointCloud }
-          ].map(({ icon: Icon, label, visible, onClick }) => (
+          {toggleButtons.map(({ icon: Icon, label, visible, onClick }) => (
             <button
               key={label}
               className={cn(

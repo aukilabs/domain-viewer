@@ -37,6 +37,11 @@ export default function DomainPage({ params, hideUI = false }: { params: { id: s
   const [pointCloudVisible, setPointCloudVisible] = useState(true);
   const [alignmentMatrix, setAlignmentMatrix] = useState<number[] | null>(null);
   const [isInIframe, setIsInIframe] = useState(false);
+  const [splatData, setSplatData] = useState<{
+    fileId: string;
+    alignmentMatrix: number[] | null;
+  } | null>(null);
+  const [splatVisible, setSplatVisible] = useState(true);
 
   console.log("alignmentMatrix111", alignmentMatrix);
 
@@ -162,6 +167,33 @@ export default function DomainPage({ params, hideUI = false }: { params: { id: s
               `[${new Date().toISOString()}] No point cloud data found for this domain`
             );
           }
+
+
+          console.log("metadata.canonicalRefinement", metadata.canonicalRefinement);
+          console.log("domainData count", domainData.length);
+
+          // Load gaussian splat (if available)
+          const splatItem = domainData.find(
+            (item: any) =>
+              (item.name === `refined_splat_${metadata.canonicalRefinement}` ||
+                item.name === `splat_${metadata.canonicalRefinement}` ||
+                item.name === `gaussian_splat_${metadata.canonicalRefinement}`) &&
+              (item.data_type === "refined_splat" ||
+                item.data_type === "splat_data" ||
+                item.data_type === "splat" ||
+                item.data_type === "gaussian_splat")
+          );
+          if (splatItem) {
+            console.log("[loadAllDomainData] Found gaussian splat:", splatItem);
+            setSplatData({
+              fileId: splatItem.id,
+              alignmentMatrix: metadata.canonicalRefinementAlignmentMatrix || null,
+            });
+          } else {
+            console.log(
+              `[${new Date().toISOString()}] No gaussian splat data found for this domain`
+            );
+          }
         }
       } else {
         console.log(
@@ -193,9 +225,12 @@ export default function DomainPage({ params, hideUI = false }: { params: { id: s
         pointCloudVisible={pointCloudVisible}
         alignmentMatrix={alignmentMatrix}
         isEmbed={isInIframe}
+        splatData={splatData}
+        splatVisible={splatVisible}
+        domainData={domainData}
       />
       {!hideUI && !isInIframe && (
-        <>
+        <div className="hidden md:block">
           <Navbar
             onDomainInfoLoaded={handleDomainInfoLoaded}
             currentDomainId={params.id}
@@ -212,9 +247,12 @@ export default function DomainPage({ params, hideUI = false }: { params: { id: s
               occlusionVisible={occlusionVisible}
               onTogglePointCloud={() => setPointCloudVisible(!pointCloudVisible)}
               pointCloudVisible={pointCloudVisible}
+              onToggleSplat={() => setSplatVisible(!splatVisible)}
+              splatVisible={splatVisible}
+              hasSplat={!!splatData}
             />
           )}
-        </>
+        </div>
       )}
       <div className="absolute bottom-4 right-4">
         <Image

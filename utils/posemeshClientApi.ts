@@ -81,6 +81,7 @@ class PosemeshClientApi {
       })
       const data = await response.json()
       console.log(`[${new Date().toISOString()}] Domain data fetched successfully`)
+      console.log("domain data", data)
       return data.data
     } catch (error) {
       console.error("Failed to fetch domain data:", error)

@@ -13,6 +13,13 @@ import { PersistedMapControls } from "./PersistedMapControls";
 import FPSControls from "./FPSControls";
 import OriginLines from "./3d/OriginLines";
 import SkyBox from "./SkyBox";
+import SplatViewer from "./SplatViewer";
+
+interface DomainData {
+  domainInfo: any;
+  domainAccessToken: string;
+  domainServerUrl: string;
+}
 
 interface Viewer3DProps {
   pointCloudData: ArrayBuffer | null;
@@ -24,6 +31,9 @@ interface Viewer3DProps {
   occlusionVisible?: boolean;
   pointCloudVisible?: boolean;
   alignmentMatrix?: number[] | null;
+  splatData?: { fileId: string; alignmentMatrix: number[] | null } | null;
+  splatVisible?: boolean;
+  domainData?: DomainData | null;
 }
 
 function parseASCIIPLY(data: ArrayBuffer): THREE.BufferGeometry {
@@ -222,16 +232,16 @@ function CameraController({
   pointCloudData: ArrayBuffer | null;
   controlMode: "map" | "fps";
 }) {
-  const { camera, controls } = useThree();
+  const { camera, controls, gl } = useThree();
   const [isIdle, setIsIdle] = useState(false);
-  const lastInteractionTime = useRef(Date.now());
+  const idleAccumulator = useRef(0);
   const animationRef = useRef<number | null>(null);
   const angleRef = useRef<number>(0);
   const targetRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
   const previousControlMode = useRef(controlMode);
 
   const resetIdleTimer = () => {
-    lastInteractionTime.current = Date.now();
+    idleAccumulator.current = 0;
     setIsIdle(false);
   };
 
@@ -256,31 +266,73 @@ function CameraController({
     previousControlMode.current = controlMode;
   }, [controlMode, camera, controls]);
 
-  useEffect(() => {
-    const reset = () => resetIdleTimer();
-    window.addEventListener("pointerdown", reset);
-    window.addEventListener("wheel", reset, { passive: true } as any);
-    window.addEventListener("keydown", reset);
-    window.addEventListener("touchstart", reset, { passive: true } as any);
-    return () => {
-      window.removeEventListener("pointerdown", reset);
-      window.removeEventListener("wheel", reset as any);
-      window.removeEventListener("keydown", reset);
-      window.removeEventListener("touchstart", reset as any);
-    };
-  }, []);
+  // Debug logging
+  const latestState = useRef({ isIdle, controlMode, pointCloudData });
+  latestState.current = { isIdle, controlMode, pointCloudData };
 
-  useFrame(() => {
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log("[CameraController Debug]", {
+        time: new Date().toISOString().split('T')[1],
+        isIdle: latestState.current.isIdle,
+        idleAccumulator: idleAccumulator.current.toFixed(2),
+        controlMode: latestState.current.controlMode,
+        hasPointCloud: !!latestState.current.pointCloudData,
+        hasControls: !!controls,
+        controlsEnabled: (controls as any)?.enabled,
+        activeElement: document.activeElement?.tagName,
+        cameraPos: camera.position.toArray().map(v => v.toFixed(2)),
+        target: (controls as any)?.target?.toArray().map((v: number) => v.toFixed(2))
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [controls, camera]);
+
+  useEffect(() => {
+    resetIdleTimer();
+    if (pointCloudData && controls) {
+      console.log("[CameraController] Forcing focus and enabling controls");
+      // Force focus on the canvas to ensure keyboard inputs work immediately
+      const canvas = gl.domElement;
+      canvas.focus();
+
+      // Explicitly enable controls
+      (controls as any).enabled = true;
+      (controls as any).update();
+    }
+  }, [pointCloudData, controls, gl]);
+
+  useEffect(() => {
+    if (!controls) return;
+
+    const reset = () => resetIdleTimer();
+    // @ts-ignore
+    controls.addEventListener("change", reset);
+
+    // Keep keydown for keyboard navigation that might not trigger 'change' immediately
+    window.addEventListener("keydown", reset);
+
+    return () => {
+      // @ts-ignore
+      controls.removeEventListener("change", reset);
+      window.removeEventListener("keydown", reset);
+    };
+  }, [controls]);
+
+  useFrame((state, delta) => {
     // Disable auto-rotation in FPS mode
     if (controlMode === "fps") {
-      lastInteractionTime.current = Date.now();
+      idleAccumulator.current = 0;
       return;
     }
+
+    // Accumulate idle time, but clamp delta to 0.1s to ignore lag spikes (e.g. loading)
+    idleAccumulator.current += Math.min(delta, 0.1);
 
     if (
       pointCloudData &&
       !isIdle &&
-      Date.now() - lastInteractionTime.current > 5000
+      idleAccumulator.current > 5
     ) {
       // Get the current target from MapControls
       const target = (controls as any)?.target || new THREE.Vector3(0, 0, 0);
@@ -463,6 +515,9 @@ export default function Viewer3D({
   pointCloudVisible = true,
   alignmentMatrix,
   isEmbed = false,
+  splatData,
+  splatVisible = true,
+  domainData,
 }: Viewer3DProps & { isEmbed?: boolean }) {
   const [controlMode, setControlMode] = useState<"map" | "fps">("map");
   const fpsStart = useMemo<[number, number, number]>(() => [0, 1.8, 3], []);
@@ -484,7 +539,7 @@ export default function Viewer3D({
   }, [isEmbed]);
 
   return (
-    <div className="w-full h-full bg-neutral-50 dark:bg-neutral-900">
+    <div className="w-full h-full bg-neutral-50 dark:bg-neutral-900 touch-none" tabIndex={0}>
       <Canvas camera={{ position: [15, 15, 15], fov: 50 }} gl={{ alpha: true }}>
         <ambientLight intensity={0.5} />
         <directionalLight intensity={0.5} position={[10, 100, 10]} />
@@ -501,6 +556,15 @@ export default function Viewer3D({
           <OcclusionMesh occlusionMeshData={occlusionMeshData} />
         )}
         {navMeshVisible && <NavMesh navMeshData={navMeshData} />}
+        {splatVisible && splatData && domainData && (
+          <SplatViewer
+            domainServerUrl={domainData.domainServerUrl}
+            domainId={domainData.domainInfo.id}
+            fileId={splatData.fileId}
+            accessToken={domainData.domainAccessToken}
+            alignmentMatrix={splatData.alignmentMatrix}
+          />
+        )}
         {controlMode === "fps" ? (
           <>
             {/* SkyBox removed to preserve color theme */}

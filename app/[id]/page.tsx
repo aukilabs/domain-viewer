@@ -27,6 +27,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         const title = `Domain: ${domainInfo.name || domainId}`;
         const description = `Click to see this Real World Web domain`;
 
+        const imageUrl = `${baseUrl}/images/og-image.png`;
+
         return {
             title,
             description,
@@ -35,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                 description,
                 images: [
                     {
-                        url: "/images/og-image.png", // We could potentially generate a dynamic image here later
+                        url: imageUrl, // We could potentially generate a dynamic image here later
                         width: 1200,
                         height: 630,
                         alt: `3D visualization of domain ${domainInfo.name}`,
@@ -47,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                 site: "@Auki",
                 title,
                 description,
-                images: ["/images/og-image.png"],
+                images: [imageUrl],
                 players: [
                     {
                         playerUrl: `${baseUrl}/${domainId}`,
