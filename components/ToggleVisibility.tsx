@@ -4,6 +4,7 @@ import { ChevronDown, Cloud, QrCode, Map, Box, Sparkles } from "lucide-react"
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { DownloadSplatButton } from "@/components/DownloadSplatButton"
 
 interface ToggleVisibilityProps {
   onTogglePortals: () => void
@@ -17,6 +18,9 @@ interface ToggleVisibilityProps {
   onToggleSplat: () => void
   splatVisible: boolean
   hasSplat: boolean
+  splatData?: ArrayBuffer | null
+  domainId?: string
+  splatFileId?: string
 }
 
 export function ToggleVisibility({ 
@@ -30,27 +34,41 @@ export function ToggleVisibility({
   pointCloudVisible,
   onToggleSplat,
   splatVisible,
-  hasSplat
+  hasSplat,
+  splatData,
+  domainId,
+  splatFileId
 }: ToggleVisibilityProps) {
-  const [isOpen, setIsOpen] = React.useState(false)
+  const [isOpen, setIsOpen] = React.useState(true)
 
-  // Build toggle buttons array dynamically
-  const toggleButtons = [
-    { icon: QrCode, label: "Toggle Portals", visible: portalsVisible, onClick: onTogglePortals },
-    { icon: Map, label: "Toggle Navigation Mesh", visible: navMeshVisible, onClick: onToggleNavMesh },
-    { icon: Box, label: "Toggle Occlusion", visible: occlusionVisible, onClick: onToggleOcclusion },
-    { icon: Cloud, label: "Toggle Point Cloud", visible: pointCloudVisible, onClick: onTogglePointCloud },
-  ]
+  // Memoize toggle buttons to prevent recreation on every render
+  const toggleButtons = React.useMemo(() => {
+    const buttons = [
+      { icon: QrCode, label: "Toggle Portals", visible: portalsVisible, onClick: onTogglePortals },
+      { icon: Map, label: "Toggle Navigation Mesh", visible: navMeshVisible, onClick: onToggleNavMesh },
+      { icon: Box, label: "Toggle Occlusion", visible: occlusionVisible, onClick: onToggleOcclusion },
+      { icon: Cloud, label: "Toggle Point Cloud", visible: pointCloudVisible, onClick: onTogglePointCloud },
+    ];
 
-  // Add splat button only if splat data exists
-  if (hasSplat) {
-    toggleButtons.push({
-      icon: Sparkles,
-      label: "Toggle Gaussian Splat",
-      visible: splatVisible,
-      onClick: onToggleSplat,
-    })
-  }
+    // Add splat button only if splat data exists
+    if (hasSplat) {
+      buttons.push({
+        icon: Sparkles,
+        label: "Toggle Gaussian Splat",
+        visible: splatVisible,
+        onClick: onToggleSplat,
+      });
+    }
+
+    return buttons;
+  }, [
+    portalsVisible, onTogglePortals,
+    navMeshVisible, onToggleNavMesh,
+    occlusionVisible, onToggleOcclusion,
+    pointCloudVisible, onTogglePointCloud,
+    splatVisible, onToggleSplat,
+    hasSplat
+  ]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -74,6 +92,15 @@ export function ToggleVisibility({
             </button>
           ))}
         </div>
+        {/* Download button hidden per user request */}
+        {/* {hasSplat && splatData && domainId && splatFileId && (
+          <DownloadSplatButton
+            data={splatData}
+            domainId={domainId}
+            fileId={splatFileId}
+            className="w-full"
+          />
+        )} */}
       </CollapsibleContent>
     </Collapsible>
   )

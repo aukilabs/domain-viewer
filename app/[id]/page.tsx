@@ -4,20 +4,21 @@ import ClientPage from "./ClientPage";
 import { headers } from "next/headers";
 
 interface Props {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-    const domainId = params.id;
+    const resolvedParams = await params;
+    const domainId = resolvedParams.id;
     // Use a temporary client ID for metadata fetching
     const posemeshClientId = "metadata-fetcher-" + Math.random().toString(36).substring(7);
 
     const result = await fetchDomainInfo(domainId, posemeshClientId);
 
     // Compute absolute base URL from incoming request headers
-    const h = headers();
+    const h = await headers();
     const proto = h.get("x-forwarded-proto") ?? "https";
     const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
     const baseUrl = `${proto}://${host}`;
@@ -68,6 +69,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
 }
 
-export default function Page({ params }: Props) {
-    return <ClientPage params={params} />;
+export default async function Page({ params }: Props) {
+    const resolvedParams = await params;
+    return <ClientPage params={resolvedParams} />;
 }

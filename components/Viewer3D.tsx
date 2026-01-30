@@ -14,6 +14,7 @@ import FPSControls from "./FPSControls";
 import OriginLines from "./3d/OriginLines";
 import SkyBox from "./SkyBox";
 import SplatViewer from "./SplatViewer";
+import LocalSplatViewer from "./LocalSplatViewer";
 
 interface DomainData {
   domainInfo: any;
@@ -34,6 +35,7 @@ interface Viewer3DProps {
   splatData?: { fileId: string; alignmentMatrix: number[] | null } | null;
   splatVisible?: boolean;
   domainData?: DomainData | null;
+  onSplatDataLoaded?: (data: ArrayBuffer) => void;
 }
 
 function parseASCIIPLY(data: ArrayBuffer): THREE.BufferGeometry {
@@ -88,12 +90,22 @@ function PointCloud({
   alignmentMatrix: number[] | null;
 }) {
   const { scene } = useThree();
-  const pointsRef = useRef<THREE.Points | null>(null);
+  const groupRef = useRef<THREE.Group | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
     if (!data) return;
 
+    isMountedRef.current = true;
+
     plyAsyncParse(data, true).then((geometry) => {
+      // Check if component is still mounted before adding to scene
+      if (!isMountedRef.current) {
+        console.log("PointCloud unmounted before parse completed, disposing geometry");
+        geometry.dispose();
+        return;
+      }
+
       console.log("completed parse ply");
       const material = new THREE.PointsMaterial({
         size: 0.09,
@@ -115,32 +127,35 @@ function PointCloud({
       group.add(points);
       group.matrixAutoUpdate = false;
       scene.add(group);
-      pointsRef.current = points;
+      groupRef.current = group;
     });
 
     // const geometry = parseASCIIPLY(data)
 
     return () => {
-      if (pointsRef.current) {
-        const points = pointsRef.current;
-        scene.remove(points);
+      isMountedRef.current = false;
+
+      if (groupRef.current) {
+        const group = groupRef.current;
+        scene.remove(group);
 
         // Dispose of geometry and material to prevent memory leaks
-        if (points.geometry) {
-          points.geometry.dispose();
-        }
-        if (points.material) {
-          if (Array.isArray(points.material)) {
-            points.material.forEach((material) => material.dispose());
-          } else {
-            points.material.dispose();
+        group.traverse((child) => {
+          if (child instanceof THREE.Points) {
+            if (child.geometry) {
+              child.geometry.dispose();
+            }
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((material) => material.dispose());
+              } else {
+                child.material.dispose();
+              }
+            }
           }
-        }
+        });
 
-        // Remove from parent group if it exists
-        if (points.parent) {
-          points.parent.remove(points);
-        }
+        groupRef.current = null;
       }
     };
   }, [data, scene, alignmentMatrix]);
@@ -266,27 +281,7 @@ function CameraController({
     previousControlMode.current = controlMode;
   }, [controlMode, camera, controls]);
 
-  // Debug logging
-  const latestState = useRef({ isIdle, controlMode, pointCloudData });
-  latestState.current = { isIdle, controlMode, pointCloudData };
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      console.log("[CameraController Debug]", {
-        time: new Date().toISOString().split('T')[1],
-        isIdle: latestState.current.isIdle,
-        idleAccumulator: idleAccumulator.current.toFixed(2),
-        controlMode: latestState.current.controlMode,
-        hasPointCloud: !!latestState.current.pointCloudData,
-        hasControls: !!controls,
-        controlsEnabled: (controls as any)?.enabled,
-        activeElement: document.activeElement?.tagName,
-        cameraPos: camera.position.toArray().map(v => v.toFixed(2)),
-        target: (controls as any)?.target?.toArray().map((v: number) => v.toFixed(2))
-      });
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [controls, camera]);
+  // Debug logging removed for performance
 
   useEffect(() => {
     resetIdleTimer();
@@ -326,14 +321,13 @@ function CameraController({
       return;
     }
 
+    // Only run idle detection if we have point cloud data
+    if (!pointCloudData) return;
+
     // Accumulate idle time, but clamp delta to 0.1s to ignore lag spikes (e.g. loading)
     idleAccumulator.current += Math.min(delta, 0.1);
 
-    if (
-      pointCloudData &&
-      !isIdle &&
-      idleAccumulator.current > 5
-    ) {
+    if (!isIdle && idleAccumulator.current > 5) {
       // Get the current target from MapControls
       const target = (controls as any)?.target || new THREE.Vector3(0, 0, 0);
       targetRef.current.copy(target);
@@ -344,8 +338,8 @@ function CameraController({
       const currentAngle = Math.atan2(offsetZ, offsetX);
       angleRef.current = currentAngle;
       setIsIdle(true);
-    }
-    if (isIdle) {
+    } else if (isIdle) {
+      // Only perform rotation calculations when idle
       angleRef.current += 0.0015;
       const offsetX = camera.position.x - targetRef.current.x;
       const offsetZ = camera.position.z - targetRef.current.z;
@@ -518,6 +512,7 @@ export default function Viewer3D({
   splatData,
   splatVisible = true,
   domainData,
+  onSplatDataLoaded,
 }: Viewer3DProps & { isEmbed?: boolean }) {
   const [controlMode, setControlMode] = useState<"map" | "fps">("map");
   const fpsStart = useMemo<[number, number, number]>(() => [0, 1.8, 3], []);
@@ -563,8 +558,15 @@ export default function Viewer3D({
             fileId={splatData.fileId}
             accessToken={domainData.domainAccessToken}
             alignmentMatrix={splatData.alignmentMatrix}
+            onDataLoaded={onSplatDataLoaded}
           />
         )}
+        {/* Local butterfly splat */}
+        <LocalSplatViewer
+          url="/splats/butterfly-ai.spz"
+          position={[5, 2, 0]}
+          scale={1}
+        />
         {controlMode === "fps" ? (
           <>
             {/* SkyBox removed to preserve color theme */}

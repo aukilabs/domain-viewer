@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, memo } from "react"
 import { Copy, ChevronDown, Globe, Clock, Database, Link } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -25,9 +25,12 @@ interface DomainInfoProps {
   onToggleSplat: () => void
   splatVisible: boolean
   hasSplat: boolean
+  splatData?: ArrayBuffer | null
+  domainId?: string
+  splatFileId?: string
 }
 
-export default function DomainInfo({
+const DomainInfo = memo(function DomainInfo({
   domainInfo,
   onTogglePortals,
   portalsVisible,
@@ -39,7 +42,10 @@ export default function DomainInfo({
   pointCloudVisible,
   onToggleSplat,
   splatVisible,
-  hasSplat
+  hasSplat,
+  splatData,
+  domainId,
+  splatFileId
 }: DomainInfoProps) {
   const [isDetailsOpen, setIsDetailsOpen] = useState(true)
 
@@ -173,9 +179,13 @@ export default function DomainInfo({
           onToggleSplat={onToggleSplat}
           splatVisible={splatVisible}
           hasSplat={hasSplat}
+          splatData={splatData}
+          domainId={domainId}
+          splatFileId={splatFileId}
         />
       </Collapsible>
     </div>
   )
-}
+});
 
+export default DomainInfo;

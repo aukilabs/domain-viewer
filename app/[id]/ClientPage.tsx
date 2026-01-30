@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import Viewer3D from "@/components/Viewer3D";
 import PosemeshClientApi, { Portal } from "@/utils/posemeshClientApi";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 export const maxDuration = 60;
 
@@ -42,6 +42,7 @@ export default function DomainPage({ params, hideUI = false }: { params: { id: s
     alignmentMatrix: number[] | null;
   } | null>(null);
   const [splatVisible, setSplatVisible] = useState(true);
+  const [splatArrayBuffer, setSplatArrayBuffer] = useState<ArrayBuffer | null>(null);
 
   console.log("alignmentMatrix111", alignmentMatrix);
 
@@ -212,6 +213,16 @@ export default function DomainPage({ params, hideUI = false }: { params: { id: s
     // Intentionally empty as data loading is handled by useEffect
   };
 
+  // Memoize toggle callbacks to prevent unnecessary re-renders
+  const handleTogglePortals = useCallback(() => setPortalsVisible(prev => !prev), []);
+  const handleToggleNavMesh = useCallback(() => setNavMeshVisible(prev => !prev), []);
+  const handleToggleOcclusion = useCallback(() => setOcclusionVisible(prev => !prev), []);
+  const handleTogglePointCloud = useCallback(() => setPointCloudVisible(prev => !prev), []);
+  const handleToggleSplat = useCallback(() => setSplatVisible(prev => !prev), []);
+  const handleSplatDataLoaded = useCallback((data: ArrayBuffer) => {
+    setSplatArrayBuffer(data);
+  }, []);
+
   return (
     <div className="relative h-screen w-full overflow-hidden bg-[#282828]">
       <Viewer3D
@@ -228,6 +239,7 @@ export default function DomainPage({ params, hideUI = false }: { params: { id: s
         splatData={splatData}
         splatVisible={splatVisible}
         domainData={domainData}
+        onSplatDataLoaded={handleSplatDataLoaded}
       />
       {!hideUI && !isInIframe && (
         <div className="hidden md:block">
@@ -239,17 +251,20 @@ export default function DomainPage({ params, hideUI = false }: { params: { id: s
           {domainData && (
             <DomainInfo
               domainInfo={domainData.domainInfo}
-              onTogglePortals={() => setPortalsVisible(!portalsVisible)}
+              onTogglePortals={handleTogglePortals}
               portalsVisible={portalsVisible}
-              onToggleNavMesh={() => setNavMeshVisible(!navMeshVisible)}
+              onToggleNavMesh={handleToggleNavMesh}
               navMeshVisible={navMeshVisible}
-              onToggleOcclusion={() => setOcclusionVisible(!occlusionVisible)}
+              onToggleOcclusion={handleToggleOcclusion}
               occlusionVisible={occlusionVisible}
-              onTogglePointCloud={() => setPointCloudVisible(!pointCloudVisible)}
+              onTogglePointCloud={handleTogglePointCloud}
               pointCloudVisible={pointCloudVisible}
-              onToggleSplat={() => setSplatVisible(!splatVisible)}
+              onToggleSplat={handleToggleSplat}
               splatVisible={splatVisible}
               hasSplat={!!splatData}
+              splatData={splatArrayBuffer}
+              domainId={domainData.domainInfo.id}
+              splatFileId={splatData?.fileId}
             />
           )}
         </div>

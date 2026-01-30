@@ -11,8 +11,9 @@
   "dependencies": {
     "@radix-ui/react-collapsible": "^1.1.2",
     "@radix-ui/react-slot": "^1.1.1",
-    "@react-three/drei": "^9.102.3",
-    "@react-three/fiber": "^8.15.19",
+    "@react-three/drei": "^10.5.1",
+    "@react-three/fiber": "^9.2.0",
+    "@sparkjsdev/spark": "^0.1.6",
     "@tanstack/react-query": "^5.90.19",
     "autoprefixer": "^10.4.20",
     "axios": "latest",
@@ -24,15 +25,15 @@
     "expo-gl": "latest",
     "jotai": "^2.7.1",
     "lucide-react": "^0.454.0",
-    "next": "14.2.16",
+    "next": "15.4.1",
     "next-themes": "^0.4.4",
     "parse-multipart-data": "latest",
-    "react": "^18",
-    "react-dom": "^18",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "react-native": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
-    "three": "^0.162.0"
+    "three": "^0.182.0"
   },
   "devDependencies": {
     "@types/node": "^20",

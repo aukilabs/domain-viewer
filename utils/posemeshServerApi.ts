@@ -75,6 +75,7 @@ class PosemeshServerApi {
         }
       });
 
+      console.log("Domin id:", domainId);
       if (!request.ok) {
         const raw = await request.text().catch(() => "");
         let message = raw;

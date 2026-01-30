@@ -1,86 +1,85 @@
-import { useSplatData } from "@/hooks/useSplatData";
 import * as THREE from "three";
 import { useEffect, useState, useRef } from "react";
 import { checkWebGL2Support } from "@/utils/webgl-check";
 import { useThree, useFrame } from "@react-three/fiber";
 import { SplatMesh, SparkRenderer, SplatFileType, dyno } from "@sparkjsdev/spark";
+import { useQuery } from "@tanstack/react-query";
 
-interface SplatViewerProps {
-  domainServerUrl: string;
-  domainId: string;
-  fileId: string;
-  accessToken: string;
-  alignmentMatrix?: number[] | null;
+interface LocalSplatViewerProps {
+  url: string;
   position?: [number, number, number];
   rotation?: [number, number, number];
   scale?: number;
-  onDataLoaded?: (data: ArrayBuffer) => void;
 }
 
 /**
- * High-level Gaussian Splat viewer component using SparkJS.
- * Handles data fetching, loading states, and rendering.
+ * Loads and renders a local gaussian splat file from the public directory.
  */
-export default function SplatViewer({
-  domainServerUrl,
-  domainId,
-  fileId,
-  accessToken,
-  alignmentMatrix,
-  position,
-  rotation,
-  scale,
-  onDataLoaded,
-}: SplatViewerProps) {
+export default function LocalSplatViewer({
+  url,
+  position = [0, 0, 0],
+  rotation = [0, 0, 0],
+  scale = 1,
+}: LocalSplatViewerProps) {
   const [webgl2Supported, setWebgl2Supported] = useState(true);
   const { gl, scene } = useThree();
   const sparkRendererRef = useRef<SparkRenderer | null>(null);
   const splatMeshRef = useRef<SplatMesh | null>(null);
   const animateT = useRef(0);
-  const effectParams = useRef({ effect: "Spread" }); // Can be: Magic, Spread, Unroll, Twister, Rain
+  const effectParams = useRef({ effect: "Magic" }); // Can be: Magic, Spread, Unroll, Twister, Rain
   const animationComplete = useRef(false);
   const ANIMATION_DURATION = 10; // seconds
 
   useEffect(() => {
     const check = checkWebGL2Support();
     if (!check.supported) {
-      console.warn("[SplatViewer]", check.message);
+      console.warn("[LocalSplatViewer]", check.message);
       setWebgl2Supported(false);
     }
   }, []);
 
-  const { data, isLoading, error } = useSplatData({
-    domainServerUrl,
-    domainId,
-    fileId,
-    accessToken,
-    enabled: Boolean(fileId && webgl2Supported),
-  });
+  // Fetch the local splat file
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["local-splat", url],
+    queryFn: async () => {
+      console.log("[LocalSplatViewer] Fetching local splat:", url);
+      const response = await fetch(url);
 
-  // Notify parent when data is loaded
-  useEffect(() => {
-    if (data && onDataLoaded) {
-      onDataLoaded(data);
-    }
-  }, [data, onDataLoaded]);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch local splat: ${response.statusText}`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+
+      console.log("[LocalSplatViewer] Local splat loaded:", {
+        url,
+        size: arrayBuffer.byteLength,
+        sizeMB: (arrayBuffer.byteLength / 1024 / 1024).toFixed(2),
+      });
+
+      return arrayBuffer;
+    },
+    enabled: Boolean(url && webgl2Supported),
+    staleTime: Infinity, // Cache forever for local files
+  });
 
   // Initialize SparkRenderer
   useEffect(() => {
     if (!sparkRendererRef.current) {
-      console.log("[SplatViewer] Initializing SparkRenderer");
+      console.log("[LocalSplatViewer] Initializing SparkRenderer");
       const sparkRenderer = new SparkRenderer({
         renderer: gl,
         autoUpdate: true,
       });
-      
-      // Add SparkRenderer to the scene (it's a THREE.Mesh)
+
+      // Add SparkRenderer to the scene
       scene.add(sparkRenderer);
       sparkRendererRef.current = sparkRenderer;
     }
 
     return () => {
       if (sparkRendererRef.current) {
-        console.log("[SplatViewer] Disposing SparkRenderer");
+        console.log("[LocalSplatViewer] Disposing SparkRenderer");
         scene.remove(sparkRendererRef.current);
         sparkRendererRef.current = null;
       }
@@ -96,7 +95,7 @@ export default function SplatViewer({
       // Stop updating once animation is complete
       if (animateT.current >= ANIMATION_DURATION) {
         animationComplete.current = true;
-        console.log("[SplatViewer] Reveal animation complete, stopping updates");
+        console.log("[LocalSplatViewer] Reveal animation complete, stopping updates");
       }
     }
   });
@@ -105,10 +104,18 @@ export default function SplatViewer({
   useEffect(() => {
     if (!data || !sparkRendererRef.current) return;
 
-    console.log("[SplatViewer] Loading splat data:", data.byteLength, "bytes");
+    console.log("[LocalSplatViewer] Loading splat data:", data.byteLength, "bytes");
 
     const loadSplat = async () => {
       try {
+        // Determine file type from URL extension
+        let fileType = SplatFileType.SPLAT;
+        if (url.endsWith(".ply")) {
+          fileType = SplatFileType.PLY;
+        } else if (url.endsWith(".spz")) {
+          fileType = SplatFileType.SPZ;
+        }
+
         // Clone the ArrayBuffer to prevent detached buffer errors
         // This is necessary because the buffer may be transferred to a worker
         const clonedData = data.slice(0);
@@ -116,25 +123,18 @@ export default function SplatViewer({
         // Create SplatMesh from the ArrayBuffer
         const splatMesh = new SplatMesh({
           fileBytes: clonedData,
-          fileType: SplatFileType.SPLAT, // Assuming .splat format
+          fileType: fileType,
         });
 
         // Wait for initialization
         await splatMesh.initialized;
 
-        console.log("[SplatViewer] SplatMesh initialized");
-
-        console.log("alignmentMatrix", alignmentMatrix);
-        // Apply transformations
-        if (alignmentMatrix) {
-          const matrix = new THREE.Matrix4().fromArray(alignmentMatrix);
-          splatMesh.applyMatrix4(matrix);
-        }
+        console.log("[LocalSplatViewer] SplatMesh initialized");
 
         // Apply 180-degree rotation correction for SparkJS coordinate system
-        splatMesh.rotation.z = Math.PI;
         splatMesh.rotation.y = Math.PI;
 
+        // Apply transformations
         if (position) {
           splatMesh.position.set(...position);
         }
@@ -157,9 +157,9 @@ export default function SplatViewer({
         // Setup reveal effect
         setupSplatModifier(splatMesh);
 
-        console.log("[SplatViewer] SplatMesh added to scene with reveal effect");
+        console.log("[LocalSplatViewer] SplatMesh added to scene at position:", position, "with reveal effect");
       } catch (err) {
-        console.error("[SplatViewer] Error loading splat mesh:", err);
+        console.error("[LocalSplatViewer] Error loading splat mesh:", err);
       }
     };
 
@@ -319,26 +319,26 @@ export default function SplatViewer({
 
     return () => {
       if (splatMeshRef.current) {
-        console.log("[SplatViewer] Removing and disposing SplatMesh");
+        console.log("[LocalSplatViewer] Removing and disposing SplatMesh");
         scene.remove(splatMeshRef.current);
         splatMeshRef.current.dispose();
         splatMeshRef.current = null;
       }
     };
-  }, [data, scene, alignmentMatrix, position, rotation, scale]);
+  }, [data, scene, position, rotation, scale, url]);
 
   if (!webgl2Supported) {
-    console.warn("[SplatViewer] WebGL2 not supported, skipping splat rendering");
+    console.warn("[LocalSplatViewer] WebGL2 not supported, skipping splat rendering");
     return null;
   }
 
   if (error) {
-    console.error("[SplatViewer] Error loading splat:", error);
-    return null; // Silent failure - splat is optional
+    console.error("[LocalSplatViewer] Error loading local splat:", error);
+    return null;
   }
 
   if (isLoading || !data) {
-    return null; // Could add a loading indicator here if desired
+    return null;
   }
 
   return null;
