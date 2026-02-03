@@ -1,498 +1,44 @@
 "use client";
 
-import { plyAsyncParse } from "@/utils/ply-parser.web";
-import type { Portal, DomainData } from "@/types/domain";
-import { matrixFromPose } from "@/utils/three-utils";
-import { useGLTF } from "@react-three/drei";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+// React and hooks
 import { useEffect, useMemo, useRef, useState } from "react";
-import * as THREE from "three";
-import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
-import { FloorGrid } from "./3d/FloorGrid";
-import { PersistedMapControls } from "./PersistedMapControls";
-import FPSControls from "./FPSControls";
-import OriginLines from "./3d/OriginLines";
-import SkyBox from "./SkyBox";
-import SplatViewer from "./SplatViewer";
-import LocalSplatViewer from "./LocalSplatViewer";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import {
-  pointCloudDataAtom,
-  portalsAtom,
-  occlusionMeshDataAtom,
-  navMeshDataAtom,
-  alignmentMatrixAtom,
-  splatDataAtom,
-  domainDataAtom,
-  splatArrayBufferAtom,
-} from "@/store/domainStore";
+
+// Three.js and React Three Fiber
+import { Canvas } from "@react-three/fiber";
+
+// Jotai atoms - visualization store
 import {
   portalsVisibleAtom,
   navMeshVisibleAtom,
   occlusionVisibleAtom,
-  pointCloudVisibleAtom,
   splatVisibleAtom,
 } from "@/store/visualizationStore";
+
+// Jotai atoms - camera store
 import { cameraControlModeAtom } from "@/store/camera-store";
+
+// Jotai hooks
+import { useAtom, useAtomValue } from "jotai";
+
+// Local components - Scene and controllers
+import Scene from "./3d/Scene";
+import CameraController from "./3d/controllers/CameraController";
+
+// Local components - Renderers
+import {
+  PortalRenderer,
+  NavMeshRenderer,
+  OcclusionMeshRenderer,
+} from "./3d/renderers";
+
+// Other components
+import FPSControls from "./FPSControls";
+import { PersistedMapControls } from "./PersistedMapControls";
+import SplatViewer from "./SplatViewer";
+import LocalSplatViewer from "./LocalSplatViewer";
 
 interface Viewer3DProps {
   isEmbed?: boolean;
-}
-
-function parseASCIIPLY(data: ArrayBuffer): THREE.BufferGeometry {
-  const text = new TextDecoder().decode(data);
-  const lines = text.split("\n");
-
-  let vertexCount = 0;
-  let headerEnd = 0;
-
-  // Parse header
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes("element vertex")) {
-      vertexCount = Number.parseInt(lines[i].split(" ")[2]);
-    }
-    if (lines[i].trim() === "end_header") {
-      headerEnd = i + 1;
-      break;
-    }
-  }
-
-  // Parse vertex data
-  const positions = new Float32Array(vertexCount * 3);
-  const colors = new Float32Array(vertexCount * 3);
-
-  for (let i = 0; i < vertexCount; i++) {
-    const parts = lines[i + headerEnd].trim().split(" ");
-    positions[i * 3] = Number.parseFloat(parts[0]);
-    positions[i * 3 + 1] = Number.parseFloat(parts[1]);
-    positions[i * 3 + 2] = Number.parseFloat(parts[2]);
-    colors[i * 3] = Number.parseInt(parts[3]) / 255.0;
-    colors[i * 3 + 1] = Number.parseInt(parts[4]) / 255.0;
-    colors[i * 3 + 2] = Number.parseInt(parts[5]) / 255.0;
-  }
-
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-
-  return geometry;
-}
-
-/**
- * Renders a point cloud from PLY file data with vertex colors.
- *
- * @param data - ArrayBuffer containing the PLY file data
- */
-function PointCloud({
-  data,
-  alignmentMatrix,
-}: {
-  data: ArrayBuffer;
-  alignmentMatrix: number[] | null;
-}) {
-  const { scene } = useThree();
-  const groupRef = useRef<THREE.Group | null>(null);
-  const isMountedRef = useRef(true);
-
-  useEffect(() => {
-    if (!data) return;
-
-    isMountedRef.current = true;
-
-    plyAsyncParse(data, true).then((geometry) => {
-      // Check if component is still mounted before adding to scene
-      if (!isMountedRef.current) {
-        console.log("PointCloud unmounted before parse completed, disposing geometry");
-        geometry.dispose();
-        return;
-      }
-
-      console.log("completed parse ply");
-      const material = new THREE.PointsMaterial({
-        size: 0.09,
-        vertexColors: true,
-        sizeAttenuation: true,
-        depthWrite: true,
-        opacity: 1,
-        transparent: true,
-      });
-
-      const points = new THREE.Points(geometry, material);
-      points.matrixAutoUpdate = false;
-      if (alignmentMatrix) {
-        console.log("HAAAASalignmentMatrix", alignmentMatrix);
-        points.applyMatrix4(new THREE.Matrix4().fromArray(alignmentMatrix));
-      }
-      console.log("points", points);
-      const group = new THREE.Group();
-      group.add(points);
-      group.matrixAutoUpdate = false;
-      scene.add(group);
-      groupRef.current = group;
-    });
-
-    // const geometry = parseASCIIPLY(data)
-
-    return () => {
-      isMountedRef.current = false;
-
-      if (groupRef.current) {
-        const group = groupRef.current;
-        scene.remove(group);
-
-        // Dispose of geometry and material to prevent memory leaks
-        group.traverse((child) => {
-          if (child instanceof THREE.Points) {
-            if (child.geometry) {
-              child.geometry.dispose();
-            }
-            if (child.material) {
-              if (Array.isArray(child.material)) {
-                child.material.forEach((material) => material.dispose());
-              } else {
-                child.material.dispose();
-              }
-            }
-          }
-        });
-
-        groupRef.current = null;
-      }
-    };
-  }, [data, scene, alignmentMatrix]);
-
-  return null;
-}
-
-/**
- * Renders portal markers (QR codes) at specified positions and orientations.
- * Uses a 3D model loaded from QR.glb.
- *
- * @param portals - Array of Portal objects containing position and orientation data
- */
-function Portals({ portals = [] }: { portals: Portal[] | null | undefined }) {
-  const { scene: gltfScene } = useGLTF("/QR.glb");
-  const { scene } = useThree();
-  const modelsRef = useRef<Map<string, THREE.Group>>(new Map());
-  const matrix = new THREE.Matrix4();
-
-  useEffect(() => {
-    if (!gltfScene) return;
-
-    portals?.forEach((portal) => {
-      let model: THREE.Group;
-
-      if (modelsRef.current.has(portal.id)) {
-        model = modelsRef.current.get(portal.id)!;
-      } else {
-        model = gltfScene.clone();
-        scene.add(model);
-        modelsRef.current.set(portal.id, model);
-      }
-
-      // Use matrixFromPose to set the transform
-      if (matrixFromPose(portal, matrix)) {
-        matrix.decompose(model.position, model.quaternion, model.scale);
-        // Apply the reported size
-        if (portal.reported_size) {
-          const size = portal.reported_size * 0.01; // Convert to meters
-          model.scale.setScalar(size);
-        }
-      }
-    });
-
-    // Cleanup removed portals
-    modelsRef.current.forEach((model, id) => {
-      if (!portals?.find((p) => p.id === id)) {
-        scene.remove(model);
-        model.traverse((object) => {
-          if (object instanceof THREE.Mesh) {
-            object.geometry.dispose();
-            if (object.material instanceof THREE.Material) {
-              object.material.dispose();
-            }
-          }
-        });
-        modelsRef.current.delete(id);
-      }
-    });
-
-    return () => {
-      modelsRef.current.forEach((model) => {
-        scene.remove(model);
-        model.traverse((object) => {
-          if (object instanceof THREE.Mesh) {
-            object.geometry.dispose();
-            if (object.material instanceof THREE.Material) {
-              object.material.dispose();
-            }
-          }
-        });
-      });
-      modelsRef.current.clear();
-    };
-  }, [gltfScene, scene, portals]);
-
-  return null;
-}
-
-/**
- * Controls camera behavior including auto-rotation when idle.
- *
- * @param pointCloudData - Point cloud data used to determine if content is loaded
- */
-function CameraController({
-  pointCloudData,
-  controlMode,
-}: {
-  pointCloudData: ArrayBuffer | null;
-  controlMode: "map" | "fps";
-}) {
-  const { camera, controls, gl } = useThree();
-  const [isIdle, setIsIdle] = useState(false);
-  const idleAccumulator = useRef(0);
-  const animationRef = useRef<number | null>(null);
-  const angleRef = useRef<number>(0);
-  const targetRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
-  const previousControlMode = useRef(controlMode);
-
-  const resetIdleTimer = () => {
-    idleAccumulator.current = 0;
-    setIsIdle(false);
-  };
-
-  useEffect(() => {
-    // When switching from FPS to Map mode, we need to ensure the camera is upright
-    // and looking at a valid target for the MapControls to work properly
-    if (previousControlMode.current === "fps" && controlMode === "map") {
-      // Reset camera up vector to ensure it's not tilted
-      camera.up.set(0, 1, 0);
-
-      // Calculate a target point in front of the camera
-      const direction = new THREE.Vector3();
-      camera.getWorldDirection(direction);
-      const target = new THREE.Vector3().copy(camera.position).add(direction.multiplyScalar(10));
-
-      // Update the controls target if available
-      if (controls && (controls as any).target) {
-        (controls as any).target.copy(target);
-        (controls as any).update();
-      }
-    }
-    previousControlMode.current = controlMode;
-  }, [controlMode, camera, controls]);
-
-  // Debug logging removed for performance
-
-  useEffect(() => {
-    resetIdleTimer();
-    if (pointCloudData && controls) {
-      console.log("[CameraController] Forcing focus and enabling controls");
-      // Force focus on the canvas to ensure keyboard inputs work immediately
-      const canvas = gl.domElement;
-      canvas.focus();
-
-      // Explicitly enable controls
-      (controls as any).enabled = true;
-      (controls as any).update();
-    }
-  }, [pointCloudData, controls, gl]);
-
-  useEffect(() => {
-    if (!controls) return;
-
-    const reset = () => resetIdleTimer();
-    // @ts-ignore
-    controls.addEventListener("change", reset);
-
-    // Keep keydown for keyboard navigation that might not trigger 'change' immediately
-    window.addEventListener("keydown", reset);
-
-    return () => {
-      // @ts-ignore
-      controls.removeEventListener("change", reset);
-      window.removeEventListener("keydown", reset);
-    };
-  }, [controls]);
-
-  useFrame((state, delta) => {
-    // Disable auto-rotation in FPS mode
-    if (controlMode === "fps") {
-      idleAccumulator.current = 0;
-      return;
-    }
-
-    // Only run idle detection if we have point cloud data
-    if (!pointCloudData) return;
-
-    // Accumulate idle time, but clamp delta to 0.1s to ignore lag spikes (e.g. loading)
-    idleAccumulator.current += Math.min(delta, 0.1);
-
-    if (!isIdle && idleAccumulator.current > 5) {
-      // Get the current target from MapControls
-      const target = (controls as any)?.target || new THREE.Vector3(0, 0, 0);
-      targetRef.current.copy(target);
-
-      // Calculate the current angle from camera position relative to target
-      const offsetX = camera.position.x - targetRef.current.x;
-      const offsetZ = camera.position.z - targetRef.current.z;
-      const currentAngle = Math.atan2(offsetZ, offsetX);
-      angleRef.current = currentAngle;
-      setIsIdle(true);
-    } else if (isIdle) {
-      // Only perform rotation calculations when idle
-      angleRef.current += 0.0015;
-      const offsetX = camera.position.x - targetRef.current.x;
-      const offsetZ = camera.position.z - targetRef.current.z;
-      const radius = Math.sqrt(offsetX * offsetX + offsetZ * offsetZ);
-      const y = camera.position.y;
-      const x = targetRef.current.x + Math.cos(angleRef.current) * Math.max(5, radius);
-      const z = targetRef.current.z + Math.sin(angleRef.current) * Math.max(5, radius);
-      camera.position.set(x, y, z);
-      camera.lookAt(targetRef.current);
-      camera.updateProjectionMatrix();
-    }
-  });
-
-  useEffect(() => {
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, []);
-
-  return (
-    // We attach handlers via PersistedMapControls in the main component
-    null
-  );
-}
-
-/**
- * Renders the occlusion mesh that represents physical barriers in the space.
- *
- * @param occlusionMeshData - ArrayBuffer containing the OBJ file data
- */
-function OcclusionMesh({
-  occlusionMeshData,
-}: {
-  occlusionMeshData: ArrayBuffer | null;
-}) {
-  const { scene } = useThree();
-  const groupRef = useRef<THREE.Group | null>(null);
-
-  useEffect(() => {
-    if (!occlusionMeshData) return;
-
-    const loader = new OBJLoader();
-    const objString = new TextDecoder().decode(occlusionMeshData);
-    const obj = loader.parse(objString);
-
-    // Create a group to hold all meshes
-    const group = new THREE.Group();
-
-    // Process all children in the OBJ
-    obj.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        // Create wireframe geometry
-        const wireframe = new THREE.WireframeGeometry(child.geometry);
-        const edges = new THREE.LineSegments(
-          wireframe,
-          new THREE.LineBasicMaterial({ color: 0x303030 })
-        );
-
-        // Create mesh with transparent faces
-        const mesh = new THREE.Mesh(
-          child.geometry,
-          new THREE.MeshBasicMaterial({
-            color: 0x808080,
-            transparent: true,
-            opacity: 0.8,
-          })
-        );
-
-        group.add(mesh);
-        group.add(edges);
-      }
-    });
-
-    scene.add(group);
-    groupRef.current = group;
-
-    return () => {
-      if (groupRef.current) {
-        scene.remove(group);
-        group.traverse((child) => {
-          if (
-            child instanceof THREE.Mesh ||
-            child instanceof THREE.LineSegments
-          ) {
-            child.geometry.dispose();
-            child.material.dispose();
-          }
-        });
-      }
-    };
-  }, [occlusionMeshData, scene]);
-
-  return null;
-}
-
-/**
- * Renders the navigation mesh that represents walkable areas in the space.
- *
- * @param navMeshData - ArrayBuffer containing the OBJ file data
- */
-function NavMesh({ navMeshData }: { navMeshData: ArrayBuffer | null }) {
-  const { scene } = useThree();
-  const groupRef = useRef<THREE.Group | null>(null);
-
-  useEffect(() => {
-    if (!navMeshData) return;
-
-    const loader = new OBJLoader();
-    const objString = new TextDecoder().decode(navMeshData);
-    const obj = loader.parse(objString);
-
-    // Create a group to hold all meshes
-    const group = new THREE.Group();
-
-    // Process all children in the OBJ
-    obj.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        const mesh = new THREE.Mesh(
-          child.geometry,
-          new THREE.MeshBasicMaterial({
-            color: 0x2b4d2b,
-            transparent: true,
-            opacity: 0.9,
-            side: THREE.DoubleSide,
-            polygonOffset: true,
-            polygonOffsetFactor: -1,
-            polygonOffsetUnits: -1,
-          })
-        );
-        group.add(mesh);
-      }
-    });
-
-    scene.add(group);
-    groupRef.current = group;
-
-    return () => {
-      if (groupRef.current) {
-        scene.remove(group);
-        group.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            child.geometry.dispose();
-            child.material.dispose();
-          }
-        });
-      }
-    };
-  }, [navMeshData, scene]);
-
-  return null;
 }
 
 /**
@@ -501,24 +47,12 @@ function NavMesh({ navMeshData }: { navMeshData: ArrayBuffer | null }) {
  * All data and visibility states are managed through Jotai atoms.
  */
 export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
-  // Read data from atoms
-  const pointCloudData = useAtomValue(pointCloudDataAtom);
-  const portals = useAtomValue(portalsAtom);
-  const occlusionMeshData = useAtomValue(occlusionMeshDataAtom);
-  const navMeshData = useAtomValue(navMeshDataAtom);
-  const alignmentMatrix = useAtomValue(alignmentMatrixAtom);
-  const splatData = useAtomValue(splatDataAtom);
-  const domainData = useAtomValue(domainDataAtom);
-  
   // Read visibility states from atoms
   const portalsVisible = useAtomValue(portalsVisibleAtom);
   const navMeshVisible = useAtomValue(navMeshVisibleAtom);
   const occlusionVisible = useAtomValue(occlusionVisibleAtom);
-  const pointCloudVisible = useAtomValue(pointCloudVisibleAtom);
   const splatVisible = useAtomValue(splatVisibleAtom);
   
-  // Get setter for splat array buffer
-  const setSplatArrayBuffer = useSetAtom(splatArrayBufferAtom);
   const [controlMode, setControlMode] = useAtom(cameraControlModeAtom);
   const fpsStart = useMemo<[number, number, number]>(() => [0, 1.8, 3], []);
   const [splatMountKey, setSplatMountKey] = useState(0);
@@ -548,27 +82,17 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isEmbed]);
+  }, [isEmbed, setControlMode]);
 
   return (
     <div className="w-full h-full bg-neutral-50 dark:bg-neutral-900 touch-none" tabIndex={0}>
       <Canvas camera={{ position: [15, 15, 15], fov: 50 }} gl={{ alpha: true }}>
-        <ambientLight intensity={0.5} />
-        <directionalLight intensity={0.5} position={[10, 100, 10]} />
-        <OriginLines />
-        <FloorGrid />
+        <Scene />
         {/* Point cloud hidden per user request */}
-        {/* {pointCloudVisible && pointCloudData && (
-          <PointCloud
-            data={pointCloudData}
-            alignmentMatrix={alignmentMatrix || null}
-          />
-        )} */}
-        {portalsVisible && <Portals portals={portals} />}
-        {occlusionVisible && (
-          <OcclusionMesh occlusionMeshData={occlusionMeshData} />
-        )}
-        {navMeshVisible && <NavMesh navMeshData={navMeshData} />}
+        {/* {pointCloudVisible && <PointCloudRenderer />} */}
+        {portalsVisible && <PortalRenderer />}
+        {occlusionVisible && <OcclusionMeshRenderer />}
+        {navMeshVisible && <NavMeshRenderer />}
         {/* Regular SplatViewer hidden per user request - using LocalSplatViewer instead */}
         {/* {splatVisible && splatData && domainData && (
           <SplatViewer
@@ -606,10 +130,8 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
             onChange={() => { }}
           />
         )}
-        <CameraController pointCloudData={pointCloudData} controlMode={controlMode} />
+        <CameraController />
       </Canvas>
     </div>
   );
 }
-
-useGLTF.preload("/QR.glb");
