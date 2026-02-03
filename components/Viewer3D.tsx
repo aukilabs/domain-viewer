@@ -15,21 +15,28 @@ import OriginLines from "./3d/OriginLines";
 import SkyBox from "./SkyBox";
 import SplatViewer from "./SplatViewer";
 import LocalSplatViewer from "./LocalSplatViewer";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import {
+  pointCloudDataAtom,
+  portalsAtom,
+  occlusionMeshDataAtom,
+  navMeshDataAtom,
+  alignmentMatrixAtom,
+  splatDataAtom,
+  domainDataAtom,
+  splatArrayBufferAtom,
+} from "@/store/domainStore";
+import {
+  portalsVisibleAtom,
+  navMeshVisibleAtom,
+  occlusionVisibleAtom,
+  pointCloudVisibleAtom,
+  splatVisibleAtom,
+} from "@/store/visualizationStore";
+import { cameraControlModeAtom } from "@/store/camera-store";
 
 interface Viewer3DProps {
-  pointCloudData: ArrayBuffer | null;
-  portals?: Portal[] | null;
-  occlusionMeshData: ArrayBuffer | null;
-  navMeshData: ArrayBuffer | null;
-  portalsVisible?: boolean;
-  navMeshVisible?: boolean;
-  occlusionVisible?: boolean;
-  pointCloudVisible?: boolean;
-  alignmentMatrix?: number[] | null;
-  splatData?: { fileId: string; alignmentMatrix: number[] | null } | null;
-  splatVisible?: boolean;
-  domainData?: DomainData | null;
-  onSplatDataLoaded?: (data: ArrayBuffer) => void;
+  isEmbed?: boolean;
 }
 
 function parseASCIIPLY(data: ArrayBuffer): THREE.BufferGeometry {
@@ -491,24 +498,28 @@ function NavMesh({ navMeshData }: { navMeshData: ArrayBuffer | null }) {
 /**
  * Main 3D visualization component that renders the domain data using Three.js.
  * Handles rendering of point clouds, portals, navigation meshes, and occlusion meshes.
+ * All data and visibility states are managed through Jotai atoms.
  */
-export default function Viewer3D({
-  pointCloudData,
-  portals = [],
-  occlusionMeshData,
-  navMeshData,
-  portalsVisible = true,
-  navMeshVisible = true,
-  occlusionVisible = true,
-  pointCloudVisible = true,
-  alignmentMatrix,
-  isEmbed = false,
-  splatData,
-  splatVisible = true,
-  domainData,
-  onSplatDataLoaded,
-}: Viewer3DProps & { isEmbed?: boolean }) {
-  const [controlMode, setControlMode] = useState<"map" | "fps">("map");
+export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
+  // Read data from atoms
+  const pointCloudData = useAtomValue(pointCloudDataAtom);
+  const portals = useAtomValue(portalsAtom);
+  const occlusionMeshData = useAtomValue(occlusionMeshDataAtom);
+  const navMeshData = useAtomValue(navMeshDataAtom);
+  const alignmentMatrix = useAtomValue(alignmentMatrixAtom);
+  const splatData = useAtomValue(splatDataAtom);
+  const domainData = useAtomValue(domainDataAtom);
+  
+  // Read visibility states from atoms
+  const portalsVisible = useAtomValue(portalsVisibleAtom);
+  const navMeshVisible = useAtomValue(navMeshVisibleAtom);
+  const occlusionVisible = useAtomValue(occlusionVisibleAtom);
+  const pointCloudVisible = useAtomValue(pointCloudVisibleAtom);
+  const splatVisible = useAtomValue(splatVisibleAtom);
+  
+  // Get setter for splat array buffer
+  const setSplatArrayBuffer = useSetAtom(splatArrayBufferAtom);
+  const [controlMode, setControlMode] = useAtom(cameraControlModeAtom);
   const fpsStart = useMemo<[number, number, number]>(() => [0, 1.8, 3], []);
   const [splatMountKey, setSplatMountKey] = useState(0);
   const prevSplatVisible = useRef(splatVisible);
@@ -566,7 +577,7 @@ export default function Viewer3D({
             fileId={splatData.fileId}
             accessToken={domainData.domainAccessToken}
             alignmentMatrix={splatData.alignmentMatrix}
-            onDataLoaded={onSplatDataLoaded}
+            onDataLoaded={setSplatArrayBuffer}
           />
         )} */}
         {/* Local splat - using downloaded file */}

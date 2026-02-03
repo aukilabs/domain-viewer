@@ -5,49 +5,44 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { DownloadSplatButton } from "@/components/DownloadSplatButton"
+import { useAtom, useAtomValue } from "jotai"
+import {
+  portalsVisibleAtom,
+  navMeshVisibleAtom,
+  occlusionVisibleAtom,
+  pointCloudVisibleAtom,
+  splatVisibleAtom,
+} from "@/store/visualizationStore"
+import {
+  hasSplatDataAtom,
+  splatArrayBufferAtom,
+  domainIdAtom,
+  splatDataAtom,
+} from "@/store/domainStore"
 
-interface ToggleVisibilityProps {
-  onTogglePortals: () => void
-  portalsVisible: boolean
-  onToggleNavMesh: () => void
-  navMeshVisible: boolean
-  onToggleOcclusion: () => void
-  occlusionVisible: boolean
-  onTogglePointCloud: () => void
-  pointCloudVisible: boolean
-  onToggleSplat: () => void
-  splatVisible: boolean
-  hasSplat: boolean
-  splatData?: ArrayBuffer | null
-  domainId?: string
-  splatFileId?: string
-}
-
-export function ToggleVisibility({ 
-  onTogglePortals, 
-  portalsVisible, 
-  onToggleNavMesh, 
-  navMeshVisible,
-  onToggleOcclusion,
-  occlusionVisible,
-  onTogglePointCloud,
-  pointCloudVisible,
-  onToggleSplat,
-  splatVisible,
-  hasSplat,
-  splatData,
-  domainId,
-  splatFileId
-}: ToggleVisibilityProps) {
+export function ToggleVisibility() {
   const [isOpen, setIsOpen] = React.useState(true)
+  
+  // Visibility atoms
+  const [portalsVisible, setPortalsVisible] = useAtom(portalsVisibleAtom)
+  const [navMeshVisible, setNavMeshVisible] = useAtom(navMeshVisibleAtom)
+  const [occlusionVisible, setOcclusionVisible] = useAtom(occlusionVisibleAtom)
+  const [pointCloudVisible, setPointCloudVisible] = useAtom(pointCloudVisibleAtom)
+  const [splatVisible, setSplatVisible] = useAtom(splatVisibleAtom)
+  
+  // Data atoms
+  const hasSplat = useAtomValue(hasSplatDataAtom)
+  const splatArrayBuffer = useAtomValue(splatArrayBufferAtom)
+  const domainId = useAtomValue(domainIdAtom)
+  const splatData = useAtomValue(splatDataAtom)
 
   // Memoize toggle buttons to prevent recreation on every render
   const toggleButtons = React.useMemo(() => {
     const buttons = [
-      { icon: QrCode, label: "Toggle Portals", visible: portalsVisible, onClick: onTogglePortals },
-      { icon: Map, label: "Toggle Navigation Mesh", visible: navMeshVisible, onClick: onToggleNavMesh },
-      { icon: Box, label: "Toggle Occlusion", visible: occlusionVisible, onClick: onToggleOcclusion },
-      { icon: Cloud, label: "Toggle Point Cloud", visible: pointCloudVisible, onClick: onTogglePointCloud },
+      { icon: QrCode, label: "Toggle Portals", visible: portalsVisible, onClick: () => setPortalsVisible(prev => !prev) },
+      { icon: Map, label: "Toggle Navigation Mesh", visible: navMeshVisible, onClick: () => setNavMeshVisible(prev => !prev) },
+      { icon: Box, label: "Toggle Occlusion", visible: occlusionVisible, onClick: () => setOcclusionVisible(prev => !prev) },
+      { icon: Cloud, label: "Toggle Point Cloud", visible: pointCloudVisible, onClick: () => setPointCloudVisible(prev => !prev) },
     ];
 
     // Add splat button only if splat data exists
@@ -56,17 +51,17 @@ export function ToggleVisibility({
         icon: Sparkles,
         label: "Toggle Gaussian Splat",
         visible: splatVisible,
-        onClick: onToggleSplat,
+        onClick: () => setSplatVisible(prev => !prev),
       });
     }
 
     return buttons;
   }, [
-    portalsVisible, onTogglePortals,
-    navMeshVisible, onToggleNavMesh,
-    occlusionVisible, onToggleOcclusion,
-    pointCloudVisible, onTogglePointCloud,
-    splatVisible, onToggleSplat,
+    portalsVisible, setPortalsVisible,
+    navMeshVisible, setNavMeshVisible,
+    occlusionVisible, setOcclusionVisible,
+    pointCloudVisible, setPointCloudVisible,
+    splatVisible, setSplatVisible,
     hasSplat
   ]);
 
@@ -93,11 +88,11 @@ export function ToggleVisibility({
           ))}
         </div>
         {/* Download button hidden per user request */}
-        {/* {hasSplat && splatData && domainId && splatFileId && (
+        {/* {hasSplat && splatArrayBuffer && domainId && splatData?.fileId && (
           <DownloadSplatButton
-            data={splatData}
+            data={splatArrayBuffer}
             domainId={domainId}
-            fileId={splatFileId}
+            fileId={splatData.fileId}
             className="w-full"
           />
         )} */}

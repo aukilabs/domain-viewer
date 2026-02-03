@@ -5,49 +5,17 @@ import { Copy, ChevronDown, Globe, Clock, Database, Link } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ToggleVisibility } from "@/components/ToggleVisibility"
+import { useAtomValue } from "jotai"
+import { domainInfoAtom } from "@/store/domainStore"
 
-interface DomainInfoProps {
-  domainInfo: {
-    id: string
-    name: string
-    createdAt: string
-    updatedAt: string
-    url: string
-  }
-  onTogglePortals: () => void
-  portalsVisible: boolean
-  onToggleNavMesh: () => void
-  navMeshVisible: boolean
-  onToggleOcclusion: () => void
-  occlusionVisible: boolean
-  onTogglePointCloud: () => void
-  pointCloudVisible: boolean
-  onToggleSplat: () => void
-  splatVisible: boolean
-  hasSplat: boolean
-  splatData?: ArrayBuffer | null
-  domainId?: string
-  splatFileId?: string
-}
-
-const DomainInfo = memo(function DomainInfo({
-  domainInfo,
-  onTogglePortals,
-  portalsVisible,
-  onToggleNavMesh,
-  navMeshVisible,
-  onToggleOcclusion,
-  occlusionVisible,
-  onTogglePointCloud,
-  pointCloudVisible,
-  onToggleSplat,
-  splatVisible,
-  hasSplat,
-  splatData,
-  domainId,
-  splatFileId
-}: DomainInfoProps) {
+const DomainInfo = memo(function DomainInfo() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(true)
+  const domainInfo = useAtomValue(domainInfoAtom)
+
+  // Early return if domain info hasn't loaded yet
+  if (!domainInfo) {
+    return null
+  }
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -167,22 +135,7 @@ const DomainInfo = memo(function DomainInfo({
         </CollapsibleContent>
       </Collapsible>
       <Collapsible className="rounded-xl bg-[#282828] p-4 pointer-events-auto">
-        <ToggleVisibility
-          onTogglePortals={onTogglePortals}
-          portalsVisible={portalsVisible}
-          onToggleNavMesh={onToggleNavMesh}
-          navMeshVisible={navMeshVisible}
-          onToggleOcclusion={onToggleOcclusion}
-          occlusionVisible={occlusionVisible}
-          onTogglePointCloud={onTogglePointCloud}
-          pointCloudVisible={pointCloudVisible}
-          onToggleSplat={onToggleSplat}
-          splatVisible={splatVisible}
-          hasSplat={hasSplat}
-          splatData={splatData}
-          domainId={domainId}
-          splatFileId={splatFileId}
-        />
+        <ToggleVisibility />
       </Collapsible>
     </div>
   )
