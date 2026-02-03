@@ -18,7 +18,7 @@ interface LocalSplatViewerProps {
 export default function LocalSplatViewer({
   url,
   position = [0, 0, 0],
-  rotation = [0, 0, 0],
+  rotation = [-Math.PI, -Math.PI, 0],
   scale = 1,
 }: LocalSplatViewerProps) {
   const [webgl2Supported, setWebgl2Supported] = useState(true);
@@ -26,9 +26,28 @@ export default function LocalSplatViewer({
   const sparkRendererRef = useRef<SparkRenderer | null>(null);
   const splatMeshRef = useRef<SplatMesh | null>(null);
   const animateT = useRef(0);
-  const effectParams = useRef({ effect: "Magic" }); // Can be: Magic, Spread, Unroll, Twister, Rain
   const animationComplete = useRef(false);
   const ANIMATION_DURATION = 10; // seconds
+  
+  // Available effects: Magic, Spread, Unroll, Twister, Rain
+  const availableEffects = ["Magic", "Spread", "Unroll"];
+  
+  // Choose a random effect on mount
+  const [currentEffect] = useState(() => {
+    const randomEffect = availableEffects[Math.floor(Math.random() * availableEffects.length)];
+    console.log("[LocalSplatViewer] Selected random effect:", randomEffect);
+    return randomEffect;
+  });
+  
+  const effectParams = useRef({ effect: currentEffect });
+
+  // Reset animation on mount to replay when toggled
+  useEffect(() => {
+    console.log("[LocalSplatViewer] Component mounted - resetting animation with effect:", currentEffect);
+    animateT.current = 0;
+    animationComplete.current = false;
+    effectParams.current.effect = currentEffect;
+  }, [currentEffect]);
 
   useEffect(() => {
     const check = checkWebGL2Support();
@@ -65,21 +84,27 @@ export default function LocalSplatViewer({
 
   // Initialize SparkRenderer
   useEffect(() => {
-    if (!sparkRendererRef.current) {
-      console.log("[LocalSplatViewer] Initializing SparkRenderer");
-      const sparkRenderer = new SparkRenderer({
-        renderer: gl,
-        autoUpdate: true,
-      });
+    console.log("[LocalSplatViewer] Initializing SparkRenderer");
+    const sparkRenderer = new SparkRenderer({
+      renderer: gl,
+      autoUpdate: true,
+    });
 
-      // Add SparkRenderer to the scene
-      scene.add(sparkRenderer);
-      sparkRendererRef.current = sparkRenderer;
-    }
+    // Add SparkRenderer to the scene
+    scene.add(sparkRenderer);
+    sparkRendererRef.current = sparkRenderer;
 
     return () => {
+      console.log("[LocalSplatViewer] Cleaning up SparkRenderer");
       if (sparkRendererRef.current) {
-        console.log("[LocalSplatViewer] Disposing SparkRenderer");
+        // First remove any splat meshes
+        if (splatMeshRef.current) {
+          console.log("[LocalSplatViewer] Removing SplatMesh from cleanup");
+          scene.remove(splatMeshRef.current);
+          splatMeshRef.current.dispose();
+          splatMeshRef.current = null;
+        }
+        // Then remove the renderer
         scene.remove(sparkRendererRef.current);
         sparkRendererRef.current = null;
       }
@@ -319,10 +344,15 @@ export default function LocalSplatViewer({
 
     return () => {
       if (splatMeshRef.current) {
-        console.log("[LocalSplatViewer] Removing and disposing SplatMesh");
-        scene.remove(splatMeshRef.current);
-        splatMeshRef.current.dispose();
-        splatMeshRef.current = null;
+        console.log("[LocalSplatViewer] Cleanup: Removing and disposing SplatMesh");
+        try {
+          scene.remove(splatMeshRef.current);
+          splatMeshRef.current.dispose();
+        } catch (err) {
+          console.error("[LocalSplatViewer] Error during cleanup:", err);
+        } finally {
+          splatMeshRef.current = null;
+        }
       }
     };
   }, [data, scene, position, rotation, scale, url]);

@@ -31,8 +31,8 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 
 ## Technology Stack
 
-- Next.js 14
-- React 18
+- Next.js 15
+- React 19
 - Three.js
 - React Three Fiber
 - TypeScript

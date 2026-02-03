@@ -516,6 +516,18 @@ export default function Viewer3D({
 }: Viewer3DProps & { isEmbed?: boolean }) {
   const [controlMode, setControlMode] = useState<"map" | "fps">("map");
   const fpsStart = useMemo<[number, number, number]>(() => [0, 1.8, 3], []);
+  const [splatMountKey, setSplatMountKey] = useState(0);
+  const prevSplatVisible = useRef(splatVisible);
+
+  // Track when splat visibility changes to force remount with animation
+  useEffect(() => {
+    // Only increment when transitioning from false to true (turning on)
+    if (splatVisible && !prevSplatVisible.current) {
+      setSplatMountKey(prev => prev + 1);
+      console.log("[Viewer3D] Splat toggled ON - remounting with new key:", splatMountKey + 1);
+    }
+    prevSplatVisible.current = splatVisible;
+  }, [splatVisible]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -540,18 +552,20 @@ export default function Viewer3D({
         <directionalLight intensity={0.5} position={[10, 100, 10]} />
         <OriginLines />
         <FloorGrid />
-        {pointCloudVisible && pointCloudData && (
+        {/* Point cloud hidden per user request */}
+        {/* {pointCloudVisible && pointCloudData && (
           <PointCloud
             data={pointCloudData}
             alignmentMatrix={alignmentMatrix || null}
           />
-        )}
+        )} */}
         {portalsVisible && <Portals portals={portals} />}
         {occlusionVisible && (
           <OcclusionMesh occlusionMeshData={occlusionMeshData} />
         )}
         {navMeshVisible && <NavMesh navMeshData={navMeshData} />}
-        {splatVisible && splatData && domainData && (
+        {/* Regular SplatViewer hidden per user request - using LocalSplatViewer instead */}
+        {/* {splatVisible && splatData && domainData && (
           <SplatViewer
             domainServerUrl={domainData.domainServerUrl}
             domainId={domainData.domainInfo.id}
@@ -560,13 +574,16 @@ export default function Viewer3D({
             alignmentMatrix={splatData.alignmentMatrix}
             onDataLoaded={onSplatDataLoaded}
           />
+        )} */}
+        {/* Local splat - using downloaded file */}
+        {splatVisible && (
+          <LocalSplatViewer
+            key={`local-splat-${splatMountKey}`}
+            url="/splats/splat_b57a2941-a323-4146-9870-90c53ec7f47a_79ce4516-b132-4baa-8fd7-5c4374248c28_2026-01-30T04-27-18-412Z.splat"
+            position={[5, 2, 0]}
+            scale={1}
+          />
         )}
-        {/* Local butterfly splat */}
-        <LocalSplatViewer
-          url="/splats/butterfly-ai.spz"
-          position={[5, 2, 0]}
-          scale={1}
-        />
         {controlMode === "fps" ? (
           <>
             {/* SkyBox removed to preserve color theme */}
