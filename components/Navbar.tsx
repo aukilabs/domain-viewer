@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useAtomValue } from "jotai"
+import { isLoadingAtom } from "@/store/domainStore"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,10 +12,10 @@ import type React from "react"
 interface NavbarProps {
   onDomainInfoLoaded: (domainInfo: any, pointCloudData: ArrayBuffer | null) => void
   currentDomainId?: string
-  isLoading?: boolean
 }
 
-export default function Navbar({ onDomainInfoLoaded, currentDomainId, isLoading = false }: NavbarProps) {
+export default function Navbar({ onDomainInfoLoaded, currentDomainId }: NavbarProps) {
+  const isLoading = useAtomValue(isLoadingAtom);
   const [domainId, setDomainId] = useState(currentDomainId || "")
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
