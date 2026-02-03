@@ -6,6 +6,7 @@ interface UseSplatDataParams {
   fileId: string;
   accessToken: string;
   enabled?: boolean;
+  visible?: boolean;
 }
 
 /**
@@ -18,6 +19,7 @@ export function useSplatData({
   fileId,
   accessToken,
   enabled = true,
+  visible = true,
 }: UseSplatDataParams) {
   return useQuery({
     queryKey: ["splat-data", domainId, fileId],
@@ -51,7 +53,7 @@ export function useSplatData({
 
       return arrayBuffer;
     },
-    enabled: Boolean(enabled && domainServerUrl && domainId && fileId && accessToken),
+    enabled: Boolean(enabled && visible && domainServerUrl && domainId && fileId && accessToken),
     staleTime: 10 * 60 * 1000, // 10 minutes
     retry: 2,
   });
