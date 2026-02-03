@@ -38,10 +38,7 @@ const DomainControls = memo(function DomainControls({
 
   return (
     <div className="hidden md:block">
-      <Navbar
-        onDomainInfoLoaded={() => {}}
-        currentDomainId={domainId}
-      />
+      <Navbar currentDomainId={domainId} />
       <DomainInfo />
     </div>
   );

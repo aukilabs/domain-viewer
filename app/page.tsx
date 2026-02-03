@@ -5,10 +5,6 @@ import Viewer3D from "@/components/Viewer3D"
 import Image from "next/image"
 
 export default function Home() {
-  const handleDomainInfoLoaded = () => {
-    // This is intentionally empty as we'll handle loading in the [id] page
-  }
-
   return (
     <div className="relative h-screen w-full overflow-hidden bg-card">
       <Viewer3D
@@ -16,7 +12,7 @@ export default function Home() {
         occlusionMeshData={null}
         navMeshData={null}
       />
-      <Navbar onDomainInfoLoaded={handleDomainInfoLoaded} />
+      <Navbar />
       <div className="absolute bottom-4 right-4">
         <Image
           src="/images/logo.svg"
