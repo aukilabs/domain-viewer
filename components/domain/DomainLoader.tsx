@@ -16,12 +16,12 @@ import {
   loadingErrorAtom,
   errorDetailsAtom,
 } from "@/store/domainStore";
-import { domainService } from "@/services/domainService";
+import { useDomainData } from "@/hooks";
 
 /**
  * DomainLoader Component
  * 
- * Handles data loading orchestration for domain viewer.
+ * Handles data loading orchestration for domain viewer using the useDomainData hook.
  * This component manages all side effects related to fetching domain data
  * and updating Jotai atoms. It has no visual output.
  * 
@@ -40,7 +40,7 @@ export default function DomainLoader({ domainId }: DomainLoaderProps) {
   const setPortals = useSetAtom(portalsAtom);
   const setNavMeshData = useSetAtom(navMeshDataAtom);
   const setOcclusionMeshData = useSetAtom(occlusionMeshDataAtom);
-  const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
+  const setIsLoading = useSetAtom(isLoadingAtom);
   const setAlignmentMatrix = useSetAtom(alignmentMatrixAtom);
   const setIsInIframe = useSetAtom(isInIframeAtom);
   const setSplatData = useSetAtom(splatDataAtom);
@@ -48,44 +48,50 @@ export default function DomainLoader({ domainId }: DomainLoaderProps) {
   const setLoadingError = useSetAtom(loadingErrorAtom);
   const setErrorDetails = useSetAtom(errorDetailsAtom);
 
+  // Use the useDomainData hook for data fetching
+  const { data, isLoading, isError, error } = useDomainData({
+    domainId,
+    enabled: Boolean(domainId),
+  });
+
   // Detect if page is loaded in an iframe (e.g., Twitter embed)
   useEffect(() => {
     setIsInIframe(window.self !== window.top);
   }, [setIsInIframe]);
 
-  // Load domain data when domain ID changes
+  // Update loading state
   useEffect(() => {
-    loadAllDomainData(domainId);
-  }, [domainId]);
+    setIsLoading(isLoading);
+  }, [isLoading, setIsLoading]);
 
-  /**
-   * Loads all domain data for a given domain ID including:
-   * - Domain information and access tokens
-   * - Portal locations
-   * - Navigation mesh
-   * - Occlusion mesh
-   * - Point cloud data
-   * - Gaussian splat data
-   *
-   * @param domainId - The unique identifier for the domain to load
-   */
-  const loadAllDomainData = async (domainId: string) => {
-    setIsLoading(true);
-    setLoadingError(null);
-    setErrorDetails(null);
-    
-    // Clear splat state before fetching to prevent stale data from previous domain
-    setSplatData(null);
-    setSplatArrayBuffer(null);
-    
-    try {
-      const result = await domainService.loadAllDomainData(domainId);
+  // Handle errors
+  useEffect(() => {
+    if (isError && error) {
+      const errorMessage = error.message || "Failed to load domain data";
+      console.error("[DomainLoader] Error loading domain data:", error);
+      setLoadingError(errorMessage);
+      setErrorDetails({
+        message: errorMessage,
+        timestamp: Date.now(),
+        domainId,
+      });
+    } else if (!isError) {
+      // Clear errors when not in error state
+      setLoadingError(null);
+      setErrorDetails(null);
+    }
+  }, [isError, error, domainId, setLoadingError, setErrorDetails]);
 
-      if (!result.success) {
-        throw new Error(result.error || "Failed to load domain data");
-      }
+  // Update atoms when data is loaded successfully
+  useEffect(() => {
+    if (data) {
+      console.log("[DomainLoader] Updating atoms with loaded data");
+      
+      // Clear splat state before updating to prevent stale data
+      setSplatData(null);
+      setSplatArrayBuffer(null);
 
-      const data = result.data!;
+      // Update all domain data atoms
       setDomainData(data.domainData);
       setPortals(data.portals);
       setNavMeshData(data.navMesh);
@@ -103,19 +109,18 @@ export default function DomainLoader({ domainId }: DomainLoaderProps) {
         setSplatData(null);
         setSplatArrayBuffer(null);
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to load domain data";
-      console.error("Error loading domain data:", error);
-      setLoadingError(errorMessage);
-      setErrorDetails({
-        message: errorMessage,
-        timestamp: Date.now(),
-        domainId,
-      });
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [
+    data,
+    setDomainData,
+    setPortals,
+    setNavMeshData,
+    setOcclusionMeshData,
+    setPointCloudData,
+    setAlignmentMatrix,
+    setSplatData,
+    setSplatArrayBuffer,
+  ]);
 
   return null;
 }

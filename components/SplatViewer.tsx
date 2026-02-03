@@ -1,4 +1,4 @@
-import { useSplatData } from "@/hooks/useSplatData";
+import { useSplatData } from "@/hooks";
 import * as THREE from "three";
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { checkWebGL2Support } from "@/utils/webgl-check";
