@@ -1,7 +1,7 @@
 "use client";
 
 import { plyAsyncParse } from "@/utils/ply-parser.web";
-import type { Portal } from "@/utils/posemeshClientApi";
+import type { Portal, DomainData } from "@/types/domain";
 import { matrixFromPose } from "@/utils/three-utils";
 import { useGLTF } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -15,12 +15,6 @@ import OriginLines from "./3d/OriginLines";
 import SkyBox from "./SkyBox";
 import SplatViewer from "./SplatViewer";
 import LocalSplatViewer from "./LocalSplatViewer";
-
-interface DomainData {
-  domainInfo: any;
-  domainAccessToken: string;
-  domainServerUrl: string;
-}
 
 interface Viewer3DProps {
   pointCloudData: ArrayBuffer | null;
