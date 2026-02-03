@@ -33,7 +33,7 @@ const DomainLayout = memo(function DomainLayout({
   const isInIframe = useAtomValue(isInIframeAtom);
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-[#282828]">
+    <div className="relative h-screen w-full overflow-hidden bg-card">
       {children}
       <Viewer3D isEmbed={isInIframe} />
       <DomainControls

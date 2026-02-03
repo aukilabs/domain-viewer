@@ -4,6 +4,7 @@ import { Grid } from "@react-three/drei"
 import { useThree } from "@react-three/fiber"
 import { useEffect } from "react"
 import * as THREE from "three"
+import { threeDColors } from "@/styles/theme"
 
 /**
  * Renders a custom infinite grid with fading axes lines.
@@ -56,8 +57,8 @@ export function CustomGrid() {
       return line
     }
 
-    const xAxis = createFadingLine([-1000, 0, 0], [1000, 0, 0], "#D0384D")
-    const zAxis = createFadingLine([0, 0, -1000], [0, 0, 1000], "#74AD18")
+    const xAxis = createFadingLine([-1000, 0, 0], [1000, 0, 0], threeDColors.xAxis)
+    const zAxis = createFadingLine([0, 0, -1000], [0, 0, 1000], threeDColors.zAxis)
 
     scene.add(xAxis)
     scene.add(zAxis)

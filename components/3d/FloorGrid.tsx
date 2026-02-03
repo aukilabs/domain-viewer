@@ -3,11 +3,12 @@
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { Grid } from "@react-three/drei";
 import { DoubleSide } from "three";
+import { threeDColors } from "@/styles/theme";
 
 export function FloorGrid() {
   const { colorScheme } = useColorScheme();
-  const cellColor = colorScheme === "dark" ? "#404040" : "#c0c0c0";
-  const sectionColor = colorScheme === "dark" ? "#404040" : "#c0c0c0";
+  const cellColor = colorScheme === "dark" ? threeDColors.gridCellDark : threeDColors.gridCellLight;
+  const sectionColor = colorScheme === "dark" ? threeDColors.gridSectionDark : threeDColors.gridSectionLight;
   return (
     <Grid
       infiniteGrid

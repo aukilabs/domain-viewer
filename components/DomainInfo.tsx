@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, memo } from "react"
-import { Copy, ChevronDown, Globe, Clock, Database, Link } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { ChevronDown, Globe, Clock, Database, Link } from "lucide-react"
+import { Card } from "@/components/ui/Card"
+import { InfoRow } from "@/components/ui/InfoRow"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ToggleVisibility } from "@/components/ToggleVisibility"
 import { useAtomValue } from "jotai"
@@ -28,115 +29,59 @@ const DomainInfo = memo(function DomainInfo() {
 
   return (
     <div className="fixed inset-4 top-24 w-full overflow-y-auto space-y-2 font-sans md:fixed md:left-4 md:bottom-4 md:w-[400px] md:top-auto pointer-events-none">
-      <Collapsible
-        open={isDetailsOpen}
-        onOpenChange={setIsDetailsOpen}
-        className="rounded-xl bg-[#282828] p-4 space-y-4 pointer-events-auto"
-      >
-        <CollapsibleTrigger className="flex w-full items-center justify-between sticky top-0 bg-[#282828] py-2 z-10">
-          <h2 className="text-[#fafafa] text-base sm:text-xl font-medium">Domain details</h2>
-          <ChevronDown className={`h-4 w-4 sm:h-5 sm:w-5 text-[#fafafa] transition-transform ${isDetailsOpen ? "" : "rotate-180"}`} />
-        </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-3 overflow-y-auto max-h-[calc(100vh-20rem)]">
-          {/* Domain ID */}
-          <div className="rounded-lg bg-[#191919] p-3">
-            <div className="flex items-center justify-between text-[#626262] text-sm mb-1">
-              <div className="flex items-center gap-2">
-                <Database className="h-4 w-4" />
-                <span>Domain ID</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-[#fafafa] hover:bg-[#fafafa]/10"
-                onClick={() => copyToClipboard(domainInfo.id)}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="text-[#fafafa] text-sm font-mono">{domainInfo.id}</div>
-          </div>
+      <Card variant="default" padding="default" className="space-y-4 pointer-events-auto">
+        <Collapsible
+          open={isDetailsOpen}
+          onOpenChange={setIsDetailsOpen}
+        >
+          <CollapsibleTrigger className="flex w-full items-center justify-between sticky top-0 bg-card py-2 z-10">
+            <h2 className="text-card-foreground text-base sm:text-xl font-medium">Domain details</h2>
+            <ChevronDown className={`h-4 w-4 sm:h-5 sm:w-5 text-card-foreground transition-transform ${isDetailsOpen ? "" : "rotate-180"}`} />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 overflow-y-auto max-h-[calc(100vh-20rem)]">
+            <InfoRow
+              icon={Database}
+              label="Domain ID"
+              value={domainInfo.id}
+              onCopy={() => copyToClipboard(domainInfo.id)}
+              mono
+            />
 
-          {/* Domain Name */}
-          <div className="rounded-lg bg-[#191919] p-3">
-            <div className="flex items-center justify-between text-[#626262] text-sm mb-1">
-              <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4" />
-                <span>Domain Name</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-[#fafafa] hover:bg-[#fafafa]/10"
-                onClick={() => copyToClipboard(domainInfo.name)}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="text-[#fafafa] text-sm">{domainInfo.name}</div>
-          </div>
+            <InfoRow
+              icon={Globe}
+              label="Domain Name"
+              value={domainInfo.name}
+              onCopy={() => copyToClipboard(domainInfo.name)}
+            />
 
-          {/* Server URL */}
-          <div className="rounded-lg bg-[#191919] p-3">
-            <div className="flex items-center justify-between text-[#626262] text-sm mb-1">
-              <div className="flex items-center gap-2">
-                <Link className="h-4 w-4" />
-                <span>Domain server address</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-[#fafafa] hover:bg-[#fafafa]/10"
-                onClick={() => copyToClipboard(domainInfo.url)}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="text-[#fafafa] text-sm break-all">{domainInfo.url}</div>
-          </div>
+            <InfoRow
+              icon={Link}
+              label="Domain server address"
+              value={domainInfo.url}
+              onCopy={() => copyToClipboard(domainInfo.url)}
+            />
 
-          {/* Created At */}
-          <div className="rounded-lg bg-[#191919] p-3">
-            <div className="flex items-center justify-between text-[#626262] text-sm mb-1">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                <span>Created at</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-[#fafafa] hover:bg-[#fafafa]/10"
-                onClick={() => copyToClipboard(domainInfo.createdAt)}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="text-[#fafafa] text-sm">{new Date(domainInfo.createdAt).toLocaleString()}</div>
-          </div>
+            <InfoRow
+              icon={Clock}
+              label="Created at"
+              value={domainInfo.createdAt}
+              onCopy={() => copyToClipboard(domainInfo.createdAt)}
+              formatValue={(val) => new Date(val).toLocaleString()}
+            />
 
-          {/* Updated At */}
-          <div className="rounded-lg bg-[#191919] p-3">
-            <div className="flex items-center justify-between text-[#626262] text-sm mb-1">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                <span>Last updated at</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-[#fafafa] hover:bg-[#fafafa]/10"
-                onClick={() => copyToClipboard(domainInfo.updatedAt)}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="text-[#fafafa] text-sm">{new Date(domainInfo.updatedAt).toLocaleString()}</div>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-      <Collapsible className="rounded-xl bg-[#282828] p-4 pointer-events-auto">
+            <InfoRow
+              icon={Clock}
+              label="Last updated at"
+              value={domainInfo.updatedAt}
+              onCopy={() => copyToClipboard(domainInfo.updatedAt)}
+              formatValue={(val) => new Date(val).toLocaleString()}
+            />
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+      <Card variant="default" padding="default" className="pointer-events-auto">
         <ToggleVisibility />
-      </Collapsible>
+      </Card>
     </div>
   )
 });

@@ -6,6 +6,7 @@ import { isLoadingAtom } from "@/store/domainStore"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner"
 import { useRouter } from "next/navigation"
 import type React from "react"
 
@@ -44,7 +45,7 @@ export default function Navbar({ onDomainInfoLoaded, currentDomainId }: NavbarPr
   }
 
   return (
-    <nav className="absolute top-4 left-4 right-4 h-14 bg-[#191919] flex items-center justify-between px-4 rounded-2xl border border-[#282828] border-[0.5px] z-10">
+    <nav className="absolute top-4 left-4 right-4 h-14 bg-background flex items-center justify-between px-4 rounded-2xl border border-border border-[0.5px] z-10">
       <div className="flex items-center">
         <div className="flex items-center gap-2">
           <Image
@@ -52,60 +53,45 @@ export default function Navbar({ onDomainInfoLoaded, currentDomainId }: NavbarPr
             alt="Domain Viewer Logo"
             width={24}
             height={24}
-            className="text-[#ff5d48]"
+            className="text-primary"
           />
-          <span className="text-[#ffffff] text-sm font-normal">domain viewer</span>
+          <span className="text-foreground text-sm font-normal">domain viewer</span>
         </div>
 
         <div className="flex items-center ml-8">
-          <div className="h-14 w-px bg-[#282828]" />
+          <div className="h-14 w-px bg-border" />
           <form onSubmit={handleSubmit} className="flex items-center gap-3 px-6">
-            <span className="text-[#ffffff] text-sm font-medium">Domain id:</span>
+            <span className="text-foreground text-sm font-medium">Domain id:</span>
             <div className="relative">
               <Input
                 type="text"
                 value={domainId}
                 onChange={(e) => setDomainId(e.target.value)}
-                className="w-[480px] h-10 bg-[#282828] border-0 text-[#ffffff] text-sm focus-visible:ring-1 focus-visible:ring-[#4a4a4a] focus-visible:ring-offset-0 focus:outline-none"
+                className="w-[480px] h-10 bg-card border-0 text-foreground text-sm focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-offset-0 focus:outline-none"
                 placeholder="Enter domain ID"
                 disabled={isLoading}
               />
               <Button
                 type="submit"
-                className="absolute right-1 top-1 h-8 px-6 bg-[#ff5d48] hover:bg-[#ff5d48]/90 text-[#ffffff] text-sm font-medium rounded-md"
+                className="absolute right-1 top-1 h-8 px-6 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-md"
                 disabled={isLoading}
               >
                 Load
               </Button>
             </div>
           </form>
-          <div className="h-14 w-px bg-[#282828]" />
+          <div className="h-14 w-px bg-border" />
         </div>
       </div>
       <div className="flex items-center gap-4">
         {isLoading && (
-          <div className="flex items-center gap-3 bg-[#282828]/80 px-4 py-2 rounded-full">
-            <div className="relative h-5 w-5">
-              <svg className="absolute inset-0 h-full w-full animate-spin" viewBox="0 0 24 24">
-                <circle className="stroke-[#282828]" cx="12" cy="12" r="10" strokeWidth="3" fill="none" />
-                <circle
-                  className="stroke-[#ff5d48]"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  strokeWidth="3"
-                  fill="none"
-                  strokeDasharray="60"
-                  strokeDashoffset="20"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </div>
-            <span className="text-[#ffffff] text-sm font-medium">Loading domain data...</span>
+          <div className="flex items-center gap-3 bg-card/80 px-4 py-2 rounded-full">
+            <LoadingSpinner size="default" label="Loading domain data..." />
+            <span className="text-foreground text-sm font-medium">Loading domain data...</span>
           </div>
         )}
         {error && (
-          <div className="text-[#ff5d48] text-sm max-w-md overflow-hidden text-ellipsis whitespace-nowrap">
+          <div className="text-primary text-sm max-w-md overflow-hidden text-ellipsis whitespace-nowrap">
             Error: {error}
           </div>
         )}

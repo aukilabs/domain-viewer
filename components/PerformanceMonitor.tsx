@@ -2,6 +2,7 @@
 
 import { useFrame, useThree } from "@react-three/fiber";
 import { useRef, useEffect, useState } from "react";
+import { threeDColors, spacing, borderRadius, zIndex } from "@/styles/theme";
 
 interface PerformanceStats {
   fps: number;
@@ -90,33 +91,33 @@ export function PerformanceMonitor({ enabled = true }: { enabled?: boolean }) {
         position: "absolute",
         top: 80,
         left: 10,
-        backgroundColor: "rgba(0, 0, 0, 0.7)",
-        color: "#0f0",
+        backgroundColor: threeDColors.performanceBg,
+        color: threeDColors.performanceText,
         fontFamily: "monospace",
         fontSize: "11px",
-        padding: "8px",
-        borderRadius: "4px",
-        zIndex: 1000,
+        padding: spacing.xs,
+        borderRadius: borderRadius.sm,
+        zIndex: zIndex.performanceMonitor,
         minWidth: "200px",
         pointerEvents: "none",
       }}
     >
-      <div style={{ marginBottom: "4px", color: "#fff", fontWeight: "bold" }}>
+      <div style={{ marginBottom: spacing.xs, color: threeDColors.performanceWhite, fontWeight: "bold" }}>
         Performance Stats
       </div>
       <div>FPS: {stats.fps}</div>
       <div>Avg FPS: {stats.avgFps}</div>
       <div>Min FPS: {stats.minFps}</div>
-      <div style={{ borderTop: "1px solid #333", marginTop: "4px", paddingTop: "4px" }}>
+      <div style={{ borderTop: `1px solid ${threeDColors.performanceBorder}`, marginTop: spacing.xs, paddingTop: spacing.xs }}>
         Draw Calls: {stats.drawCalls}
       </div>
       <div>Triangles: {stats.triangles.toLocaleString()}</div>
-      <div style={{ borderTop: "1px solid #333", marginTop: "4px", paddingTop: "4px" }}>
+      <div style={{ borderTop: `1px solid ${threeDColors.performanceBorder}`, marginTop: spacing.xs, paddingTop: spacing.xs }}>
         Geometries: {stats.geometries}
       </div>
       <div>Textures: {stats.textures}</div>
       {stats.memory > 0 && (
-        <div style={{ borderTop: "1px solid #333", marginTop: "4px", paddingTop: "4px" }}>
+        <div style={{ borderTop: `1px solid ${threeDColors.performanceBorder}`, marginTop: spacing.xs, paddingTop: spacing.xs }}>
           Memory: {stats.memory}MB
         </div>
       )}

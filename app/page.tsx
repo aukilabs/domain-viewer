@@ -10,7 +10,7 @@ export default function Home() {
   }
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-[#282828]">
+    <div className="relative h-screen w-full overflow-hidden bg-card">
       <Viewer3D
         pointCloudData={null}
         occlusionMeshData={null}

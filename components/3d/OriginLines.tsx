@@ -3,6 +3,7 @@
 import { Line } from "@react-three/drei";
 import React from "react";
 import * as THREE from "three";
+import { threeDColors } from "@/styles/theme";
 
 export default function OriginLines() {
   const xPoints = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0)];
@@ -11,9 +12,9 @@ export default function OriginLines() {
 
   return (
     <>
-      <Line points={xPoints} color="#dc2626" lineWidth={2} />
-      <Line points={yPoints} color="#84cc16" lineWidth={2} />
-      <Line points={zPoints} color="#2563eb" lineWidth={2} />
+      <Line points={xPoints} color={threeDColors.xAxisDebug} lineWidth={2} />
+      <Line points={yPoints} color={threeDColors.yAxisDebug} lineWidth={2} />
+      <Line points={zPoints} color={threeDColors.zAxisDebug} lineWidth={2} />
     </>
   );
 }
