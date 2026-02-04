@@ -1,7 +1,7 @@
 "use client";
 
 // React and hooks
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo } from "react";
 
 // Three.js and React Three Fiber
 import { Canvas } from "@react-three/fiber";
@@ -16,6 +16,9 @@ import {
 
 // Jotai atoms - camera store
 import { cameraControlModeAtom } from "@/store/camera-store";
+
+// Jotai atoms - domain store
+import { domainDataAtom, splatDataAtom } from "@/store/domainStore";
 
 // Jotai hooks
 import { useAtom, useAtomValue } from "jotai";
@@ -35,7 +38,6 @@ import {
 import FPSControls from "./FPSControls";
 import { PersistedMapControls } from "./PersistedMapControls";
 import SplatViewer from "./SplatViewer";
-import LocalSplatViewer from "./LocalSplatViewer";
 
 interface Viewer3DProps {
   isEmbed?: boolean;
@@ -53,20 +55,12 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
   const occlusionVisible = useAtomValue(occlusionVisibleAtom);
   const splatVisible = useAtomValue(splatVisibleAtom);
   
+  // Read domain data from atoms
+  const domainData = useAtomValue(domainDataAtom);
+  const splatData = useAtomValue(splatDataAtom);
+  
   const [controlMode, setControlMode] = useAtom(cameraControlModeAtom);
   const fpsStart = useMemo<[number, number, number]>(() => [0, 1.8, 3], []);
-  const [splatMountKey, setSplatMountKey] = useState(0);
-  const prevSplatVisible = useRef(splatVisible);
-
-  // Track when splat visibility changes to force remount with animation
-  useEffect(() => {
-    // Only increment when transitioning from false to true (turning on)
-    if (splatVisible && !prevSplatVisible.current) {
-      setSplatMountKey(prev => prev + 1);
-      console.log("[Viewer3D] Splat toggled ON - remounting with new key:", splatMountKey + 1);
-    }
-    prevSplatVisible.current = splatVisible;
-  }, [splatVisible]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -93,24 +87,13 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
         {portalsVisible && <PortalRenderer />}
         {occlusionVisible && <OcclusionMeshRenderer />}
         {navMeshVisible && <NavMeshRenderer />}
-        {/* Regular SplatViewer hidden per user request - using LocalSplatViewer instead */}
-        {/* {splatVisible && splatData && domainData && (
+        {splatVisible && splatData && domainData && (
           <SplatViewer
             domainServerUrl={domainData.domainServerUrl}
             domainId={domainData.domainInfo.id}
             fileId={splatData.fileId}
             accessToken={domainData.domainAccessToken}
             alignmentMatrix={splatData.alignmentMatrix}
-            onDataLoaded={setSplatArrayBuffer}
-          />
-        )} */}
-        {/* Local splat - using downloaded file */}
-        {splatVisible && (
-          <LocalSplatViewer
-            key={`local-splat-${splatMountKey}`}
-            url="/splats/splat_b57a2941-a323-4146-9870-90c53ec7f47a_79ce4516-b132-4baa-8fd7-5c4374248c28_2026-01-30T04-27-18-412Z.splat"
-            position={[5, 2, 0]}
-            scale={1}
           />
         )}
         {controlMode === "fps" ? (
