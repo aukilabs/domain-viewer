@@ -67,11 +67,11 @@ export function ToggleVisibility() {
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger className="flex w-full items-center justify-between bg-card py-2 z-10">
+      <CollapsibleTrigger className="flex w-full items-center justify-between bg-card py-2 z-10 pointer-events-auto">
         <h2 className="text-card-foreground text-base sm:text-xl font-medium">Toggle Visibility</h2>
         <ChevronDown className={`h-4 w-4 sm:h-5 sm:w-5 text-card-foreground transition-transform ${isOpen ? "" : "rotate-180"}`} />
       </CollapsibleTrigger>
-      <CollapsibleContent className="pt-2">
+      <CollapsibleContent className="pt-2 pointer-events-none">
         <div className="grid grid-cols-4 gap-2 sm:flex sm:gap-2">
           {toggleButtons.map(({ icon, label, visible, onClick }) => (
             <IconButton
@@ -81,6 +81,7 @@ export function ToggleVisibility() {
               onClick={onClick}
               aria-label={label}
               variant="toggle"
+              className="pointer-events-auto"
             />
           ))}
         </div>

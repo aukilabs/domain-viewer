@@ -42,7 +42,7 @@ export default function CameraController() {
       // Update the controls target if available
       if (controls && (controls as any).target) {
         (controls as any).target.copy(target);
-        (controls as any).update();
+        (controls as any).update?.();
       }
     }
     previousControlMode.current = controlMode;
@@ -60,7 +60,7 @@ export default function CameraController() {
 
       // Explicitly enable controls
       (controls as any).enabled = true;
-      (controls as any).update();
+      (controls as any).update?.();
     }
   }, [pointCloudData, controls, gl]);
 

@@ -159,11 +159,26 @@ export interface PointCloudItem extends DomainDataItem {
 /**
  * Gaussian splat data item.
  * Contains 3D Gaussian splatting data for photorealistic rendering.
+ *
+ * Supported data_type values:
+ * - `splat_data`          — Standard single-file Gaussian splat (.splat)
+ * - `splat_data_sog`      — Single-file compressed SOG format (.sogs.zip)
+ * - `splat_partition`      — One partition tile of a partitioned splat (.splat)
+ * - `splat_partition_sog`  — One partition tile in SOG format (.sogs.zip)
+ * - `refined_splat`        — Legacy name for single-file splat
+ * - `splat` / `gaussian_splat` — Older name variants
  */
 export interface SplatItem extends DomainDataItem {
   /** Various splat data type names used in the system */
-  data_type: 'refined_splat' | 'splat_data' | 'splat' | 'gaussian_splat';
-  /** Name follows pattern: refined_splat_{id}, splat_{id}, or gaussian_splat_{id} */
+  data_type:
+    | 'refined_splat'
+    | 'splat_data'
+    | 'splat_data_sog'
+    | 'splat_partition'
+    | 'splat_partition_sog'
+    | 'splat'
+    | 'gaussian_splat';
+  /** Name follows pattern: refined_splat_{id}, splat_{id}, splat_partition_{lod}_{size}_{x}_{z}_{id}, etc. */
   name: string;
 }
 
@@ -222,10 +237,14 @@ export interface DomainDataCollection {
   occlusionMesh: ArrayBuffer | null;
   /** Point cloud binary data (PLY format) */
   pointCloud: ArrayBuffer | null;
-  /** Gaussian splat data with metadata */
+  /** Gaussian splat data with metadata (legacy single-file) */
   splatData: SplatData | null;
   /** Alignment matrix for point cloud/splat transformation */
   alignmentMatrix: AlignmentMatrix | null;
+  /** Raw domain data items list from the server (used for partition discovery) */
+  domainDataItems: DomainDataItem[];
+  /** Canonical refinement ID from domain metadata */
+  refinementId: string | null;
 }
 
 /**

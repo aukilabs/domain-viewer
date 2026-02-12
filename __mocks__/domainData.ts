@@ -153,6 +153,8 @@ export const mockDomainDataCollection: DomainDataCollection = {
     alignmentMatrix: mockDomainMetadata.canonicalRefinementAlignmentMatrix || null,
   },
   alignmentMatrix: mockDomainMetadata.canonicalRefinementAlignmentMatrix || null,
+  domainDataItems: mockDomainDataItems,
+  refinementId: mockDomainMetadata.canonicalRefinement || null,
 };
 
 /**

@@ -90,7 +90,7 @@ const InfoRow = React.forwardRef<HTMLDivElement, InfoRowProps>(
               variant="ghost"
               size="sm"
               onClick={onCopy}
-              className="h-6 w-6 p-0"
+              className="h-6 w-6 p-0 pointer-events-auto"
               aria-label={`Copy ${label}`}
             >
               <Copy className="h-3 w-3" />

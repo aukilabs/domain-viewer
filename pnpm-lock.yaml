@@ -21,8 +21,8 @@ importers:
         specifier: ^9.2.0
         version: 9.5.0(9e44442d9d309acdf752807fabf2ea02)
       '@sparkjsdev/spark':
-        specifier: ^0.1.6
-        version: 0.1.10
+        specifier: github:aukilabs/sparkjs#auki-1
+        version: git+https://git@github.com:aukilabs/sparkjs.git#4116d7e7c01e74030b2db814e1812a902b7aeef9(three@0.182.0)
       '@tanstack/react-query':
         specifier: ^5.90.19
         version: 5.90.20(react@19.2.4)
@@ -1242,8 +1242,11 @@ packages:
   '@sinonjs/fake-timers@10.3.0':
     resolution: {integrity: sha512-V4BG07kuYSUkTCSBHG8G8TNhM+F19jXFWnQtzj+we8DrkpSBCee9Z3Ms8yiGer/dlmhe35/Xdgyo3/0rQKg7YA==}
 
-  '@sparkjsdev/spark@0.1.10':
-    resolution: {integrity: sha512-CiijdZQuj7KPDUqIZPiEqyUkJCYo1JqR05vq/V+ElxMwqR7L70ZuZDyIKcasjZHSiPB8pGRMH8HZGqUKO9aRPQ==}
+  '@sparkjsdev/spark@git+https://git@github.com:aukilabs/sparkjs.git#4116d7e7c01e74030b2db814e1812a902b7aeef9':
+    resolution: {commit: 4116d7e7c01e74030b2db814e1812a902b7aeef9, repo: git@github.com:aukilabs/sparkjs.git, type: git}
+    version: 0.1.10
+    peerDependencies:
+      three: ^0.167.0
 
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
@@ -4979,9 +4982,10 @@ snapshots:
     dependencies:
       '@sinonjs/commons': 3.0.1
 
-  '@sparkjsdev/spark@0.1.10':
+  '@sparkjsdev/spark@git+https://git@github.com:aukilabs/sparkjs.git#4116d7e7c01e74030b2db814e1812a902b7aeef9(three@0.182.0)':
     dependencies:
       fflate: 0.8.2
+      three: 0.182.0
 
   '@swc/helpers@0.5.15':
     dependencies:

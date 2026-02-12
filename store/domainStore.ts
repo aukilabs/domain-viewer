@@ -19,7 +19,7 @@
  */
 
 import { atom } from 'jotai';
-import type { DomainData, Portal } from '@/types/domain';
+import type { DomainData, DomainDataItem, Portal } from '@/types/domain';
 
 // ============================================================================
 // Primitive Atoms - Domain Data
@@ -119,6 +119,28 @@ export const splatDataAtom = atom<{
  */
 export const splatArrayBufferAtom = atom<ArrayBuffer | null>(null);
 
+/**
+ * Stores the raw domain data items list from the server.
+ * Used by useRefinementSplat to discover partition and single-file splats.
+ *
+ * @example
+ * ```tsx
+ * const domainDataItems = useAtomValue(domainDataItemsAtom);
+ * ```
+ */
+export const domainDataItemsAtom = atom<DomainDataItem[]>([]);
+
+/**
+ * Stores the canonical refinement ID from domain metadata.
+ * Used as the key for loading Gaussian splat data (partitioned or single-file).
+ *
+ * @example
+ * ```tsx
+ * const refinementId = useAtomValue(refinementIdAtom);
+ * ```
+ */
+export const refinementIdAtom = atom<string | null>(null);
+
 // ============================================================================
 // Primitive Atoms - Loading & Error States
 // ============================================================================
@@ -184,14 +206,17 @@ export const isInIframeAtom = atom<boolean>(false);
 
 /**
  * Computed boolean indicating if splat data is available.
- * Automatically updates when splatDataAtom changes.
+ * True when either legacy splatData exists or a refinementId is set
+ * (the new RefinementSplat path discovers and loads splats lazily).
  * 
  * @example
  * ```tsx
  * const hasSplatData = useAtomValue(hasSplatDataAtom);
  * ```
  */
-export const hasSplatDataAtom = atom((get) => !!get(splatDataAtom));
+export const hasSplatDataAtom = atom(
+  (get) => !!get(splatDataAtom) || !!get(refinementIdAtom)
+);
 
 /**
  * Computed boolean indicating if domain data has been loaded.

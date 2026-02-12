@@ -145,7 +145,7 @@ export default function Navbar({ currentDomainId }: NavbarProps) {
                   value={domainId}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  className={`w-full max-w-[200px] sm:max-w-[300px] md:max-w-[400px] lg:max-w-[480px] h-10 bg-card border-0 text-foreground text-sm focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-offset-0 focus:outline-none ${isLoading ? 'opacity-50 pl-10' : ''} ${validationError ? 'ring-1 ring-destructive' : ''}`}
+                  className={`w-full max-w-[200px] sm:max-w-[300px] md:max-w-[400px] lg:max-w-[480px] h-12 px-4 py-3 bg-card border-0 text-foreground text-sm focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-offset-0 focus:outline-none ${isLoading ? 'opacity-50 pl-10' : ''} ${validationError ? 'ring-1 ring-destructive' : ''}`}
                   placeholder="Enter domain ID (Esc to clear)"
                   disabled={isLoading}
                   aria-label="Domain ID input"
@@ -154,7 +154,7 @@ export default function Navbar({ currentDomainId }: NavbarProps) {
                 />
                 <Button
                   type="submit"
-                  className="absolute right-1 top-1 h-8 px-4 md:px-6 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-md"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-9 px-4 md:px-6 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-md"
                   disabled={isLoading || !!validationError || !domainId.trim()}
                 >
                   {isLoading ? "Loading..." : "Load"}

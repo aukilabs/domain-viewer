@@ -28,17 +28,17 @@ const DomainInfo = memo(function DomainInfo() {
   }
 
   return (
-    <div className="fixed inset-4 top-24 w-full overflow-y-auto space-y-2 font-sans md:fixed md:left-4 md:bottom-4 md:w-[400px] md:top-auto pointer-events-none">
-      <Card variant="default" padding="default" className="space-y-4 pointer-events-auto">
+    <div className="fixed inset-4 top-24 w-full overflow-y-auto space-y-2 font-sans md:fixed md:left-4 md:bottom-4 md:w-[400px] md:top-auto pointer-events-none touch-none">
+      <Card variant="default" padding="default" className="space-y-4">
         <Collapsible
           open={isDetailsOpen}
           onOpenChange={setIsDetailsOpen}
         >
-          <CollapsibleTrigger className="flex w-full items-center justify-between sticky top-0 bg-card py-2 z-10">
+          <CollapsibleTrigger className="flex w-full items-center justify-between sticky top-0 bg-card py-2 z-10 pointer-events-auto">
             <h2 className="text-card-foreground text-base sm:text-xl font-medium">Domain details</h2>
             <ChevronDown className={`h-4 w-4 sm:h-5 sm:w-5 text-card-foreground transition-transform ${isDetailsOpen ? "" : "rotate-180"}`} />
           </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-3 overflow-y-auto max-h-[calc(100vh-20rem)]">
+          <CollapsibleContent className="space-y-3 overflow-y-auto max-h-[calc(100vh-20rem)] pointer-events-none">
             <InfoRow
               icon={Database}
               label="Domain ID"
@@ -79,7 +79,7 @@ const DomainInfo = memo(function DomainInfo() {
           </CollapsibleContent>
         </Collapsible>
       </Card>
-      <Card variant="default" padding="default" className="pointer-events-auto">
+      <Card variant="default" padding="default" className="pointer-events-none">
         <ToggleVisibility />
       </Card>
     </div>

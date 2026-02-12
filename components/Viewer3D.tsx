@@ -18,7 +18,7 @@ import {
 import { cameraControlModeAtom } from "@/store/camera-store";
 
 // Jotai atoms - domain store
-import { domainDataAtom, splatDataAtom } from "@/store/domainStore";
+import { domainDataAtom, splatDataAtom, refinementIdAtom } from "@/store/domainStore";
 
 // Jotai hooks
 import { useAtom, useAtomValue } from "jotai";
@@ -37,7 +37,7 @@ import {
 // Other components
 import FPSControls from "./FPSControls";
 import { PersistedMapControls } from "./PersistedMapControls";
-import SplatViewer from "./SplatViewer";
+import RefinementSplat from "./3d/RefinementSplat";
 
 interface Viewer3DProps {
   isEmbed?: boolean;
@@ -58,6 +58,7 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
   // Read domain data from atoms
   const domainData = useAtomValue(domainDataAtom);
   const splatData = useAtomValue(splatDataAtom);
+  const refinementId = useAtomValue(refinementIdAtom);
   
   const [controlMode, setControlMode] = useAtom(cameraControlModeAtom);
   const fpsStart = useMemo<[number, number, number]>(() => [0, 1.8, 3], []);
@@ -87,14 +88,8 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
         {portalsVisible && <PortalRenderer />}
         {occlusionVisible && <OcclusionMeshRenderer />}
         {navMeshVisible && <NavMeshRenderer />}
-        {splatVisible && splatData && domainData && (
-          <SplatViewer
-            domainServerUrl={domainData.domainServerUrl}
-            domainId={domainData.domainInfo.id}
-            fileId={splatData.fileId}
-            accessToken={domainData.domainAccessToken}
-            alignmentMatrix={splatData.alignmentMatrix}
-          />
+        {splatVisible && refinementId && domainData && (
+          <RefinementSplat refinementId={refinementId} />
         )}
         {controlMode === "fps" ? (
           <>

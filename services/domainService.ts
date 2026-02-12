@@ -35,11 +35,22 @@ import { retryWithBackoff } from '@/utils/retry';
  */
 export class DomainService {
   private readonly fileService: FileService;
-  private readonly posemeshClientId: string;
+  private _posemeshClientId?: string;
 
   constructor(posemeshClientId?: string, fileService?: FileService) {
-    this.posemeshClientId = posemeshClientId || this.getOrCreateClientId();
+    this._posemeshClientId = posemeshClientId;
     this.fileService = fileService || new FileService();
+  }
+
+  /**
+   * Gets the posemesh client ID, lazily creating it if needed.
+   * This property ensures client ID is only accessed when needed, not during module initialization.
+   */
+  private get posemeshClientId(): string {
+    if (!this._posemeshClientId) {
+      this._posemeshClientId = this.getOrCreateClientId();
+    }
+    return this._posemeshClientId;
   }
 
   /**
@@ -495,6 +506,8 @@ export class DomainService {
         pointCloud,
         splatData,
         alignmentMatrix: metadata?.canonicalRefinementAlignmentMatrix || null,
+        domainDataItems: dataList,
+        refinementId: metadata?.canonicalRefinement || null,
       };
 
       console.log(`[${new Date().toISOString()}] Successfully loaded all domain data`);
@@ -589,7 +602,7 @@ export class DomainService {
 
   /**
    * Finds the splat item for a specific refinement.
-   * Checks multiple name and type variations.
+   * Checks multiple name and type variations, including SOG compressed formats.
    * 
    * @param dataList - List of domain data items
    * @param canonicalRefinement - Refinement identifier
@@ -599,16 +612,56 @@ export class DomainService {
     dataList: DomainDataItem[],
     canonicalRefinement: string
   ): SplatItem | null {
-    const splatDataTypes = ['refined_splat', 'splat_data', 'splat', 'gaussian_splat'];
+    const singleSplatDataTypes = [
+      'refined_splat', 'splat_data', 'splat_data_sog',
+      'splat', 'gaussian_splat',
+    ];
     const splatNamePrefixes = ['refined_splat_', 'splat_', 'gaussian_splat_'];
 
     return this.findDataItem(dataList, (item) => {
-      const matchesType = splatDataTypes.includes(item.data_type);
+      const matchesType = singleSplatDataTypes.includes(item.data_type);
       const matchesName = splatNamePrefixes.some(
         (prefix) => item.name === `${prefix}${canonicalRefinement}`
       );
       return matchesType && matchesName;
     }) as SplatItem | null;
+  }
+
+  /**
+   * Checks whether any splat data (single-file or partitioned) exists for a refinement.
+   *
+   * @param dataList - List of domain data items
+   * @param refinementId - Refinement identifier to check
+   * @returns true if at least one matching splat item exists
+   */
+  hasSplatForRefinement(
+    dataList: DomainDataItem[],
+    refinementId: string
+  ): boolean {
+    if (!dataList || !refinementId) return false;
+
+    // Check single-file splats
+    const singleSplatDataTypes = ['splat_data', 'splat_data_sog', 'refined_splat', 'splat', 'gaussian_splat'];
+    const hasSingle = dataList.some(
+      (item) =>
+        item.name === `refined_splat_${refinementId}` &&
+        item.data_type &&
+        singleSplatDataTypes.includes(item.data_type)
+    );
+    if (hasSingle) return true;
+
+    // Check partitioned splats
+    const partitionSplatDataTypes = ['splat_partition', 'splat_partition_sog'];
+    const partitionNameRegex = new RegExp(
+      `^splat_partition_(full|coarse|fine)_(\\d+)_(-?\\d+)_(-?\\d+)_${refinementId}$`
+    );
+    return dataList.some(
+      (item) =>
+        item.name &&
+        item.data_type &&
+        partitionSplatDataTypes.includes(item.data_type) &&
+        partitionNameRegex.test(item.name)
+    );
   }
 
   /**
@@ -630,9 +683,18 @@ export class DomainService {
    * Checks multiple storage locations (localStorage, sessionStorage, cookies)
    * for maximum persistence across browser sessions.
    * 
+   * Only works in browser environment - returns a temporary UUID on server.
+   * 
    * @returns The posemesh client ID, either retrieved or newly generated
    */
   private getOrCreateClientId(): string {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') {
+      // Server-side: return a temporary UUID
+      // This will be replaced with the actual client ID when used in the browser
+      return crypto.randomUUID();
+    }
+
     // Get or create posemesh_client_id from multiple storage options
     let posemeshClientId =
       localStorage.getItem('posemesh_client_id') ||

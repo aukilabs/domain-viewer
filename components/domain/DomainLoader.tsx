@@ -15,6 +15,8 @@ import {
   splatArrayBufferAtom,
   loadingErrorAtom,
   errorDetailsAtom,
+  domainDataItemsAtom,
+  refinementIdAtom,
 } from "@/store/domainStore";
 import { useDomainData } from "@/hooks";
 
@@ -45,6 +47,8 @@ export default function DomainLoader({ domainId }: DomainLoaderProps) {
   const setIsInIframe = useSetAtom(isInIframeAtom);
   const setSplatData = useSetAtom(splatDataAtom);
   const setSplatArrayBuffer = useSetAtom(splatArrayBufferAtom);
+  const setDomainDataItems = useSetAtom(domainDataItemsAtom);
+  const setRefinementId = useSetAtom(refinementIdAtom);
   const setLoadingError = useSetAtom(loadingErrorAtom);
   const setErrorDetails = useSetAtom(errorDetailsAtom);
 
@@ -99,6 +103,10 @@ export default function DomainLoader({ domainId }: DomainLoaderProps) {
       setPointCloudData(data.pointCloud);
       setAlignmentMatrix(data.alignmentMatrix);
 
+      // Store domain data items list and refinement ID for splat loading
+      setDomainDataItems(data.domainDataItems || []);
+      setRefinementId(data.refinementId || null);
+
       // Only set splat data if present, otherwise explicitly clear it
       if (data.splatData) {
         setSplatData({
@@ -120,6 +128,8 @@ export default function DomainLoader({ domainId }: DomainLoaderProps) {
     setAlignmentMatrix,
     setSplatData,
     setSplatArrayBuffer,
+    setDomainDataItems,
+    setRefinementId,
   ]);
 
   return null;
