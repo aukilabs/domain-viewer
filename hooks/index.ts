@@ -22,7 +22,6 @@ export { usePlyParser } from "./usePlyParser";
 export type { UsePlyParserParams, UsePlyParserResult } from "./usePlyParser";
 
 // Splat data hooks
-export { useSplatData } from "./useSplatData";
 export { useRefinementSplat } from "./useRefinementSplat";
 export type { ParsedPartition, RefinementSplatData } from "./useRefinementSplat";
 export { useRefinementHasSplat, refinementHasSplat } from "./useRefinementHasSplat";
