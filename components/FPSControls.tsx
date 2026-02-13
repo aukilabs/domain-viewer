@@ -2,7 +2,7 @@
 
 import { PointerLockControls } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { Vector3 } from "three";
 
 interface FPSControlsProps {
@@ -16,8 +16,9 @@ export default function FPSControls({
   makeDefault,
   onExit
 }: FPSControlsProps) {
-  const { camera, gl } = useThree();
+  const { camera } = useThree();
   const controlsRef = useRef<any>(null);
+  const exitedRef = useRef(false);
 
   const movement = useRef({
     forward: false,
@@ -31,19 +32,14 @@ export default function FPSControls({
     camera.position.set(start[0], start[1], start[2]);
   }, [camera, start]);
 
-  const exitFPS = () => {
-    if (controlsRef.current) {
-      controlsRef.current.unlock();
-    }
+  const doExit = useCallback(() => {
+    if (exitedRef.current) return;
+    exitedRef.current = true;
+    try { document.exitPointerLock(); } catch { /* already unlocked */ }
     onExit?.();
-  };
+  }, [onExit]);
 
   useEffect(() => {
-    const canvas = gl.domElement as HTMLElement;
-    if (controlsRef.current) {
-      controlsRef.current.lock();
-    }
-
     const down = (e: KeyboardEvent) => {
       switch (e.code) {
         case "KeyW":
@@ -67,7 +63,12 @@ export default function FPSControls({
           movement.current.shift = true;
           break;
         case "Escape":
-          exitFPS();
+          // If pointer is not locked (overlay showing), exit FPS mode.
+          // If pointer IS locked, the browser handles Escape to unlock;
+          // we don't exit FPS mode—just show the overlay again.
+          if (!document.pointerLockElement) {
+            doExit();
+          }
           break;
       }
     };
@@ -102,10 +103,8 @@ export default function FPSControls({
     return () => {
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
-      exitFPS();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [doExit]);
 
   useFrame((_, delta) => {
     const speed = (movement.current.shift ? 6 : 3) * delta;
@@ -119,10 +118,8 @@ export default function FPSControls({
       const move = dir.applyQuaternion(camera.quaternion).multiplyScalar(speed);
       camera.position.add(move);
     }
-    camera.position.y = 1.8;
+    camera.position.y = start[1];
   });
 
   return <PointerLockControls ref={controlsRef} makeDefault={makeDefault} />;
 }
-
-

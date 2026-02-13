@@ -1,7 +1,7 @@
 "use client";
 
 // React and hooks
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 // Three.js and React Three Fiber
 import { Canvas } from "@react-three/fiber";
@@ -59,26 +59,46 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
   const refinementId = useAtomValue(refinementIdAtom);
   
   const [controlMode, setControlMode] = useAtom(cameraControlModeAtom);
-  const fpsStart = useMemo<[number, number, number]>(() => [0, 1.8, 3], []);
+  const controlModeRef = useMemo(() => ({ current: controlMode }), [controlMode]);
+  const fpsStart = useMemo<[number, number, number]>(() => [0, 1.6, 3], []);
+
+  // Track whether the pointer is currently locked (for overlay visibility)
+  const [pointerLocked, setPointerLocked] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => {
+      setPointerLocked(!!document.pointerLockElement);
+    };
+    document.addEventListener("pointerlockchange", onChange);
+    return () => document.removeEventListener("pointerlockchange", onChange);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "KeyF" && !isEmbed) {
-        setControlMode((m) => {
-          if (m === "fps") {
-            document.exitPointerLock();
-            return "map";
-          }
-          return "fps";
-        });
+        if (controlModeRef.current === "fps") {
+          document.exitPointerLock();
+          setControlMode("map");
+        } else {
+          setControlMode("fps");
+        }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isEmbed, setControlMode]);
+  }, [isEmbed, setControlMode, controlModeRef]);
+
+  const handleOverlayClick = useCallback(() => {
+    const canvas = document.querySelector("canvas");
+    if (canvas) {
+      canvas.requestPointerLock();
+    }
+  }, []);
+
+  const showOverlay = controlMode === "fps" && !pointerLocked;
 
   return (
-    <div className="w-full h-full bg-neutral-50 dark:bg-neutral-900 touch-none" tabIndex={0}>
+    <div className="w-full h-full bg-neutral-50 dark:bg-neutral-900 touch-none relative" tabIndex={0}>
       <Canvas camera={{ position: [15, 15, 15], fov: 50 }} gl={{ alpha: true }}>
         <Scene />
         {/* Point cloud hidden per user request */}
@@ -108,6 +128,33 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
         )}
         <CameraController />
       </Canvas>
+
+      {/* Click-to-lock overlay — shown when in FPS mode but pointer isn't locked yet */}
+      {showOverlay && (
+        <div
+          className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/40 cursor-pointer select-none"
+          onClick={handleOverlayClick}
+        >
+          {/* Crosshair */}
+          <svg width="48" height="48" viewBox="0 0 48 48" className="mb-4 text-white opacity-80">
+            <line x1="24" y1="8" x2="24" y2="20" stroke="currentColor" strokeWidth="2" />
+            <line x1="24" y1="28" x2="24" y2="40" stroke="currentColor" strokeWidth="2" />
+            <line x1="8" y1="24" x2="20" y2="24" stroke="currentColor" strokeWidth="2" />
+            <line x1="28" y1="24" x2="40" y2="24" stroke="currentColor" strokeWidth="2" />
+            <circle cx="24" cy="24" r="2" fill="currentColor" />
+          </svg>
+
+          <p className="text-white text-lg font-medium mb-2">Click to enter first-person mode</p>
+          <div className="flex gap-4 text-white/70 text-sm">
+            <span><kbd className="px-1.5 py-0.5 bg-white/20 rounded text-xs font-mono">W A S D</kbd> Move</span>
+            <span><kbd className="px-1.5 py-0.5 bg-white/20 rounded text-xs font-mono">Mouse</kbd> Look</span>
+            <span><kbd className="px-1.5 py-0.5 bg-white/20 rounded text-xs font-mono">Shift</kbd> Sprint</span>
+          </div>
+          <p className="mt-3 text-white/50 text-xs">
+            Press <kbd className="px-1 py-0.5 bg-white/20 rounded text-xs font-mono">F</kbd> or <kbd className="px-1 py-0.5 bg-white/20 rounded text-xs font-mono">Esc</kbd> to exit
+          </p>
+        </div>
+      )}
     </div>
   );
 }
