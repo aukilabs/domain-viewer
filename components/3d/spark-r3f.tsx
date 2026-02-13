@@ -85,8 +85,10 @@ type SparkSplatProps = {
   downsampleSmoothing?: number;
   /** Reveal animation effect name. When set, the splat plays a reveal animation on load. */
   revealEffect?: SplatEffect;
-  /** Duration of the reveal animation in seconds (default 10) */
+  /** Duration of the reveal animation in shader-time seconds (default 15) */
   revealDuration?: number;
+  /** Time scale multiplier for the reveal animation (default 2.5, higher = faster) */
+  revealTimeScale?: number;
 } & Omit<JSX.IntrinsicElements['group'], 'children'>;
 
 export function SparkSplat({
@@ -99,7 +101,8 @@ export function SparkSplat({
   downsampleDistance,
   downsampleSmoothing,
   revealEffect,
-  revealDuration = 10,
+  revealDuration = 15,
+  revealTimeScale = 2.5,
   ...groupProps
 }: SparkSplatProps) {
   const { camera } = useThree();
@@ -145,16 +148,18 @@ export function SparkSplat({
   useFrame((_state, delta) => {
     if (!splatMesh || !revealEffect || animationComplete.current) return;
 
-    // Frame-skip optimisation: update shader uniforms every 2nd frame
-    frameSkip.current++;
-    if (frameSkip.current % 2 !== 0) return;
-
-    animateT.current += delta;
-    splatMesh.updateGenerator();
+    // Always accumulate time so no delta is lost
+    animateT.current += delta * revealTimeScale;
 
     if (animateT.current >= revealDuration) {
       animationComplete.current = true;
     }
+
+    // Frame-skip optimisation: only push to GPU every 2nd frame
+    frameSkip.current++;
+    if (frameSkip.current % 2 !== 0) return;
+
+    splatMesh.updateGenerator();
   });
 
   // Apply rendering parameters

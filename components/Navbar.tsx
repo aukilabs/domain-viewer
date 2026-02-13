@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner"
 import { Card } from "@/components/ui/Card"
 import { useRouter } from "next/navigation"
-import { AlertCircle, Loader2 } from "lucide-react"
+import { AlertCircle } from "lucide-react"
 import type React from "react"
 import { getDomainIdError } from "@/utils/validation"
 import { 
@@ -133,19 +133,16 @@ export default function Navbar({ currentDomainId }: NavbarProps) {
             className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 px-2 md:px-6 w-full md:w-auto"
             aria-busy={isLoading}
           >
-            <span className="hidden sm:inline text-foreground text-sm font-medium">Domain id:</span>
+            <span className="hidden sm:inline text-foreground text-sm font-medium whitespace-nowrap">Domain id:</span>
             <div className="relative w-full">
               <div className="relative">
-                {isLoading && (
-                  <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                )}
                 <Input
                   ref={inputRef}
                   type="text"
                   value={domainId}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  className={`w-full max-w-[200px] sm:max-w-[300px] md:max-w-[400px] lg:max-w-[480px] h-12 px-4 py-3 bg-card border-0 text-foreground text-sm focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-offset-0 focus:outline-none ${isLoading ? 'opacity-50 pl-10' : ''} ${validationError ? 'ring-1 ring-destructive' : ''}`}
+                  className={`w-full min-w-[200px] sm:min-w-[300px] md:min-w-[400px] lg:min-w-[480px] h-12 px-4 py-3 bg-card border-0 text-foreground text-sm focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-offset-0 focus:outline-none ${validationError ? 'ring-1 ring-destructive' : ''}`}
                   placeholder="Enter domain ID (Esc to clear)"
                   disabled={isLoading}
                   aria-label="Domain ID input"

@@ -8,7 +8,7 @@
  * SOG compressed format. Data is loaded progressively — partitions appear
  * one by one as they download.
  */
-import { Suspense } from 'react';
+import { Suspense, useMemo } from 'react';
 import { useAtomValue } from 'jotai';
 import { SparkRoot, SparkSplat } from './spark-r3f';
 import {
@@ -23,8 +23,13 @@ import {
 import { splatVisibleAtom } from '@/store/visualizationStore';
 import type { SplatEffect } from '@/types/splat';
 
-/** Default reveal animation effect applied to all splats */
-const DEFAULT_REVEAL_EFFECT: SplatEffect = 'Spread';
+/** All available reveal animation effects */
+const REVEAL_EFFECTS: SplatEffect[] = ['Magic', 'Spread', 'Unroll', 'Twister', 'Rain'];
+
+/** Pick a random reveal effect */
+function randomRevealEffect(): SplatEffect {
+  return REVEAL_EFFECTS[Math.floor(Math.random() * REVEAL_EFFECTS.length)];
+}
 
 // ── Inner content component ──────────────────────────────
 
@@ -32,6 +37,8 @@ function SplatContent({ refinementId }: { refinementId: string }) {
   const domainData = useAtomValue(domainDataAtom);
   const domainDataItems = useAtomValue(domainDataItemsAtom);
   const splatVisible = useAtomValue(splatVisibleAtom);
+  // Pick a random reveal effect once per mount
+  const revealEffect = useMemo(() => randomRevealEffect(), []);
 
   const { data, isLoading, error } = useRefinementSplat({
     refinementId,
@@ -82,7 +89,7 @@ function SplatContent({ refinementId }: { refinementId: string }) {
             downsampleNth={partition.lodType === 'fine' ? 5 : 10}
             downsampleDistance={partition.lodType === 'fine' ? 6 : 30}
             downsampleSmoothing={partition.lodType === 'fine' ? 0.6 : 0.8}
-            revealEffect={DEFAULT_REVEAL_EFFECT}
+            revealEffect={revealEffect}
             frustumCulled={false}
           />
         ))}
@@ -100,9 +107,9 @@ function SplatContent({ refinementId }: { refinementId: string }) {
           format={data.splatFileType}
           rotation={[Math.PI, 0, 0]}
           partitionSize={100}
-          maxDistance={20}
+          maxDistance={50}
           fadeDistance={4}
-          revealEffect={DEFAULT_REVEAL_EFFECT}
+          revealEffect={revealEffect}
           frustumCulled={false}
         />
       </>

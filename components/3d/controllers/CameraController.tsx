@@ -4,7 +4,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useAtomValue } from "jotai";
-import { pointCloudDataAtom } from "@/store/domainStore";
+import { domainDataAtom } from "@/store/domainStore";
 import { cameraControlModeAtom } from "@/store/camera-store";
 
 /**
@@ -12,7 +12,7 @@ import { cameraControlModeAtom } from "@/store/camera-store";
  * Reads point cloud data and control mode from Jotai atoms.
  */
 export default function CameraController() {
-  const pointCloudData = useAtomValue(pointCloudDataAtom);
+  const domainData = useAtomValue(domainDataAtom);
   const controlMode = useAtomValue(cameraControlModeAtom);
   const { camera, controls, gl } = useThree();
   const [isIdle, setIsIdle] = useState(false);
@@ -52,7 +52,7 @@ export default function CameraController() {
 
   useEffect(() => {
     resetIdleTimer();
-    if (pointCloudData && controls) {
+    if (domainData && controls) {
       console.log("[CameraController] Forcing focus and enabling controls");
       // Force focus on the canvas to ensure keyboard inputs work immediately
       const canvas = gl.domElement;
@@ -62,24 +62,25 @@ export default function CameraController() {
       (controls as any).enabled = true;
       (controls as any).update?.();
     }
-  }, [pointCloudData, controls, gl]);
+  }, [domainData, controls, gl]);
 
   useEffect(() => {
-    if (!controls) return;
-
+    const canvas = gl.domElement;
     const reset = () => resetIdleTimer();
-    // @ts-ignore
-    controls.addEventListener("change", reset);
 
-    // Keep keydown for keyboard navigation that might not trigger 'change' immediately
+    // Listen for actual user interactions instead of controls' "change" event,
+    // because "change" also fires when we programmatically move the camera
+    // during auto-rotation, creating a feedback loop that kills the rotation.
+    canvas.addEventListener("pointerdown", reset);
+    canvas.addEventListener("wheel", reset);
     window.addEventListener("keydown", reset);
 
     return () => {
-      // @ts-ignore
-      controls.removeEventListener("change", reset);
+      canvas.removeEventListener("pointerdown", reset);
+      canvas.removeEventListener("wheel", reset);
       window.removeEventListener("keydown", reset);
     };
-  }, [controls]);
+  }, [gl]);
 
   useFrame((state, delta) => {
     // Disable auto-rotation in FPS mode
@@ -88,8 +89,8 @@ export default function CameraController() {
       return;
     }
 
-    // Only run idle detection if we have point cloud data
-    if (!pointCloudData) return;
+    // Only run idle detection if we have domain data loaded
+    if (!domainData) return;
 
     // Accumulate idle time, but clamp delta to 0.1s to ignore lag spikes (e.g. loading)
     idleAccumulator.current += Math.min(delta, 0.1);

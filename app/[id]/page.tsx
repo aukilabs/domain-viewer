@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { fetchDomainInfo } from "@/app/actions";
 import ClientPage from "./ClientPage";
 import { headers } from "next/headers";
+import { isValidDomainId } from "@/utils/validation";
 
 interface Props {
     params: Promise<{
@@ -9,9 +10,20 @@ interface Props {
     }>;
 }
 
+const DEFAULT_METADATA: Metadata = {
+    title: "Real World Web domain viewer",
+    description: "RWW domain visualizer",
+};
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const resolvedParams = await params;
     const domainId = resolvedParams.id;
+
+    // Skip API calls for invalid domain IDs (e.g. static asset requests like .js.map files)
+    if (!isValidDomainId(domainId)) {
+        return DEFAULT_METADATA;
+    }
+
     // Use a temporary client ID for metadata fetching
     const posemeshClientId = "metadata-fetcher-" + Math.random().toString(36).substring(7);
 
@@ -63,10 +75,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         };
     }
 
-    return {
-        title: "Real World Web domain viewer",
-        description: "RWW domain visualizer",
-    };
+    return DEFAULT_METADATA;
 }
 
 export default async function Page({ params }: Props) {

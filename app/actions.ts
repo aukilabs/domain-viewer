@@ -1,6 +1,7 @@
 "use server"
 
 import PosemeshServerApi from "@/utils/posemeshServerApi"
+import { isValidDomainId } from "@/utils/validation"
 
 /**
  * Response type for domain information requests.
@@ -29,6 +30,14 @@ interface DomainInfoResult {
  * @throws Error if Auki Network credentials are not configured
  */
 export async function fetchDomainInfo(domainId: string, posemeshClientId: string): Promise<DomainInfoResult> {
+  // Reject obviously invalid domain IDs early (e.g. static asset paths like "worker-xxx.js.map")
+  if (!isValidDomainId(domainId)) {
+    return {
+      success: false,
+      error: `Invalid domain ID format: ${domainId}`,
+    }
+  }
+
   const apiClient = new PosemeshServerApi(posemeshClientId)
   console.log(`[${new Date().toISOString()}] Starting fetchDomainInfo for domainId: ${domainId}`)
 
