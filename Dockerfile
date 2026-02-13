@@ -1,6 +1,7 @@
 # Build stage
 FROM node:18-alpine AS builder
 WORKDIR /app
+RUN apk add --no-cache git
 COPY package*.json ./
 RUN npm ci
 COPY . .
@@ -31,4 +32,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"] 
+CMD ["node", "server.js"]
