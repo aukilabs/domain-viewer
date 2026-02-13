@@ -11,7 +11,6 @@ import {
   portalsVisibleAtom,
   navMeshVisibleAtom,
   occlusionVisibleAtom,
-  splatVisibleAtom,
 } from "@/store/visualizationStore";
 
 // Jotai atoms - camera store
@@ -53,7 +52,6 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
   const portalsVisible = useAtomValue(portalsVisibleAtom);
   const navMeshVisible = useAtomValue(navMeshVisibleAtom);
   const occlusionVisible = useAtomValue(occlusionVisibleAtom);
-  const splatVisible = useAtomValue(splatVisibleAtom);
   
   // Read domain data from atoms
   const domainData = useAtomValue(domainDataAtom);
@@ -88,7 +86,7 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
         {portalsVisible && <PortalRenderer />}
         {occlusionVisible && <OcclusionMeshRenderer />}
         {navMeshVisible && <NavMeshRenderer />}
-        {splatVisible && refinementId && domainData && (
+        {refinementId && domainData && (
           <RefinementSplat refinementId={refinementId} />
         )}
         {controlMode === "fps" ? (

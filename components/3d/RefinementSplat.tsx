@@ -48,9 +48,6 @@ function SplatContent({ refinementId }: { refinementId: string }) {
     domainDataItems,
   });
 
-  // Respect visibility toggle
-  if (!splatVisible) return null;
-
   const hasRenderableData =
     (data?.type === 'partitions' && data.partitions.length > 0) ||
     data?.type === 'single';
@@ -70,7 +67,7 @@ function SplatContent({ refinementId }: { refinementId: string }) {
   // ── PARTITIONED SPLAT ──────────────────────────────────
   if (data.type === 'partitions') {
     return (
-      <>
+      <group visible={splatVisible}>
         <SparkRoot autoUpdate={false} sceneVersion={data.partitions.length} />
         {data.partitions.map((partition, i) => (
           <SparkSplat
@@ -93,14 +90,14 @@ function SplatContent({ refinementId }: { refinementId: string }) {
             frustumCulled={false}
           />
         ))}
-      </>
+      </group>
     );
   }
 
   // ── SINGLE-FILE SPLAT ──────────────────────────────────
   if (data.type === 'single' && data.buffer && data.buffer.byteLength > 0) {
     return (
-      <>
+      <group visible={splatVisible}>
         <SparkRoot autoUpdate={false} sceneVersion={0} />
         <SparkSplat
           fileBytes={data.buffer}
@@ -112,7 +109,7 @@ function SplatContent({ refinementId }: { refinementId: string }) {
           revealEffect={revealEffect}
           frustumCulled={false}
         />
-      </>
+      </group>
     );
   }
 
