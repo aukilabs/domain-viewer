@@ -108,9 +108,9 @@ export function getEffectTypeFromName(effectName: SplatEffect): number {
  * Generates the main effect shader logic based on inputs/outputs
  */
 export function getSplatShaderStatements(
-  inputs: { gsplat: string; t: string; effectType: string },
-  outputs: { gsplat: string }
-): string {
+  inputs: { gsplat?: string; t?: string; effectType?: string },
+  outputs: { gsplat?: string }
+): string[] {
   return dyno.unindentLines(`
     ${outputs.gsplat} = ${inputs.gsplat};
     float t = ${inputs.t};

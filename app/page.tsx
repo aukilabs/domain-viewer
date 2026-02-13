@@ -7,11 +7,7 @@ import Image from "next/image"
 export default function Home() {
   return (
     <div className="relative h-screen w-full overflow-hidden bg-card">
-      <Viewer3D
-        pointCloudData={null}
-        occlusionMeshData={null}
-        navMeshData={null}
-      />
+      <Viewer3D />
       <Navbar />
       <div className="absolute bottom-4 right-4">
         <Image

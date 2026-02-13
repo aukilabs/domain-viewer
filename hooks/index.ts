@@ -30,4 +30,4 @@ export { useRefinementHasSplat, refinementHasSplat } from "./useRefinementHasSpl
 export { default as useInterval } from "./useInterval";
 export { useColorScheme } from "./useColorScheme";
 export { useDebounce } from "./useDebounce";
-export { isMobile } from "./use-mobile";
+export { useIsMobile } from "./use-mobile";

@@ -12,7 +12,7 @@
  */
 import * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useThree, useFrame } from '@react-three/fiber';
+import { useThree, useFrame, type ThreeElements } from '@react-three/fiber';
 import { Group, Vector3, WebGLRenderer } from 'three';
 import { SplatMesh, SparkRenderer, SplatFileType } from '@sparkjsdev/spark';
 import useInterval from '@/hooks/useInterval';
@@ -89,7 +89,7 @@ type SparkSplatProps = {
   revealDuration?: number;
   /** Time scale multiplier for the reveal animation (default 2.5, higher = faster) */
   revealTimeScale?: number;
-} & Omit<JSX.IntrinsicElements['group'], 'children'>;
+} & Omit<ThreeElements['group'], 'children'>;
 
 export function SparkSplat({
   fileBytes,
@@ -181,13 +181,6 @@ export function SparkSplat({
     }
   }, [splatMesh, maxDistance, fadeDistance, downsampleNth, downsampleDistance, downsampleSmoothing]);
 
-  const dispose = () => {
-    setSplatMesh((prev) => {
-      prev?.dispose();
-      return null;
-    });
-  };
-
   // Distance-based frustum culling (randomised interval to avoid pop-in sync)
   const cullCheckIntervalMs = 80 + Math.floor(Math.random() * 20);
   useInterval(() => {
@@ -201,7 +194,7 @@ export function SparkSplat({
   }, cullCheckIntervalMs);
 
   return (
-    <group {...groupProps} dispose={dispose} ref={groupRef}>
+    <group {...groupProps} dispose={null} ref={groupRef}>
       {splatMesh && !culled && <primitive object={splatMesh} />}
     </group>
   );
