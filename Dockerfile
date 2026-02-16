@@ -9,11 +9,13 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
     && rustup target add wasm32-unknown-unknown
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Stub out lefthook (git hooks manager invoked by spark's prepare script — not needed in Docker)
-RUN printf '#!/bin/sh\nexit 0\n' > /usr/local/bin/lefthook && chmod +x /usr/local/bin/lefthook
-
 COPY package*.json ./
-RUN npm ci
+
+# Install deps without lifecycle scripts (spark git dep's prepare script
+# requires lefthook which isn't needed in Docker and causes failures).
+# Then manually build only the spark WASM inside node_modules.
+RUN npm ci --ignore-scripts && \
+    cd node_modules/@sparkjsdev/spark && npm run build:wasm
 COPY . .
 RUN npm run build
 
