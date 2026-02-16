@@ -1,21 +1,14 @@
 # Build stage
 FROM node:20-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache git bash curl build-base
-
-# Install Rust toolchain (needed by @sparkjsdev/spark git dep to compile WASM)
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
-    && . /root/.cargo/env \
-    && rustup target add wasm32-unknown-unknown
-ENV PATH="/root/.cargo/bin:${PATH}"
+RUN apk add --no-cache git bash
 
 COPY package*.json ./
 
-# Install deps without lifecycle scripts (spark git dep's prepare script
-# requires lefthook which isn't needed in Docker and causes failures).
-# Then manually build only the spark WASM inside node_modules.
-RUN npm ci --ignore-scripts && \
-    cd node_modules/@sparkjsdev/spark && npm run build:wasm
+# Skip lifecycle scripts: the @sparkjsdev/spark git dep's "prepare" script
+# tries to compile Rust WASM and install lefthook (git hooks), neither of which
+# is needed here — the pre-built dist/ is already committed in the repo.
+RUN npm ci --ignore-scripts
 COPY . .
 RUN npm run build
 
