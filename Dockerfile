@@ -3,7 +3,7 @@ FROM node:18-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache git
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 COPY . .
 RUN npm run build
 
