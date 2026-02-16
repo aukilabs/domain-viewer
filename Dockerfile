@@ -1,7 +1,14 @@
 # Build stage
 FROM node:20-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache git bash
+RUN apk add --no-cache git bash curl build-base
+
+# Install Rust toolchain (needed by @sparkjsdev/spark git dep to compile WASM)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+    && . /root/.cargo/env \
+    && rustup target add wasm32-unknown-unknown
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 COPY package*.json ./
 RUN npm ci
 COPY . .
