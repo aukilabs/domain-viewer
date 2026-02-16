@@ -5,10 +5,11 @@ RUN apk add --no-cache git bash
 
 COPY package*.json ./
 
-# Skip lifecycle scripts: the @sparkjsdev/spark git dep's "prepare" script
-# tries to compile Rust WASM and install lefthook (git hooks), neither of which
-# is needed here — the pre-built dist/ is already committed in the repo.
-RUN npm ci --ignore-scripts
+# --ignore-scripts: the @sparkjsdev/spark git dep's "prepare" script tries to
+#   compile Rust WASM and install lefthook — neither is needed, dist/ is pre-built.
+# --force: the sparkjs repo has a devDependency on "file:rust/spark-internal-rs/pkg"
+#   which doesn't exist until the WASM is built; --force lets npm continue past this.
+RUN npm ci --ignore-scripts --force
 COPY . .
 RUN npm run build
 
