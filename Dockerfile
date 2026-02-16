@@ -9,7 +9,7 @@ COPY package*.json ./
 #   compile Rust WASM and install lefthook — neither is needed, dist/ is pre-built.
 # --force: the sparkjs repo has a devDependency on "file:rust/spark-internal-rs/pkg"
 #   which doesn't exist until the WASM is built; --force lets npm continue past this.
-RUN npm ci --ignore-scripts --force
+RUN npm ci --ignore-scripts --force --loglevel verbose 2>&1 || (echo "=== NPM DEBUG LOG ===" && cat /root/.npm/_logs/*-debug-0.log 2>/dev/null && exit 1)
 COPY . .
 RUN npm run build
 
