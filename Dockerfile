@@ -1,7 +1,7 @@
 # Build stage
 FROM node:18-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache git
+RUN apk add --no-cache git bash
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 COPY . .
