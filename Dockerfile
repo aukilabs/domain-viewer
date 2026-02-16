@@ -1,15 +1,18 @@
 # Build stage
 FROM node:20-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache git bash
+RUN apk add --no-cache git bash curl build-base
+
+# Install Rust toolchain — the @sparkjsdev/spark git dep's "prepare" script
+# compiles WASM from Rust source (npm always runs prepare for git deps,
+# --ignore-scripts does NOT skip it).
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+    && . /root/.cargo/env \
+    && rustup target add wasm32-unknown-unknown
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 COPY package*.json ./
-
-# --ignore-scripts: the @sparkjsdev/spark git dep's "prepare" script tries to
-#   compile Rust WASM and install lefthook — neither is needed, dist/ is pre-built.
-# --force: the sparkjs repo has a devDependency on "file:rust/spark-internal-rs/pkg"
-#   which doesn't exist until the WASM is built; --force lets npm continue past this.
-RUN npm ci --ignore-scripts --force --loglevel verbose 2>&1 || (echo "=== NPM DEBUG LOG ===" && cat /root/.npm/_logs/*-debug-0.log 2>/dev/null && exit 1)
+RUN npm ci --loglevel verbose 2>&1 || (echo "=== NPM DEBUG LOG ===" && cat /root/.npm/_logs/*-debug-0.log 2>/dev/null && exit 1)
 COPY . .
 RUN npm run build
 
