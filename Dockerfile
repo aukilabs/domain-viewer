@@ -9,6 +9,9 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
     && rustup target add wasm32-unknown-unknown
 ENV PATH="/root/.cargo/bin:${PATH}"
 
+# Stub out lefthook (git hooks manager invoked by spark's prepare script — not needed in Docker)
+RUN printf '#!/bin/sh\nexit 0\n' > /usr/local/bin/lefthook && chmod +x /usr/local/bin/lefthook
+
 COPY package*.json ./
 RUN npm ci
 COPY . .
