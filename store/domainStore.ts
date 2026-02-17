@@ -154,7 +154,7 @@ export const refinementIdAtom = atom<string | null>(null);
  * const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
  * ```
  */
-export const isLoadingAtom = atom<boolean>(true);
+export const isLoadingAtom = atom<boolean>(false);
 
 /**
  * Stores error messages from failed data loading operations.
