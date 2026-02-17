@@ -1,0 +1,131 @@
+/**
+ * RefinementSplat.tsx — Composition (Scene Integration)
+ *
+ * Top-level component that ties the data loading hook to the SparkSplat renderer.
+ * Drop this inside your R3F <Canvas> to render Gaussian splats for a refinement.
+ *
+ * Supports both partitioned (tiled LOD) and single-file splats, including
+ * SOG compressed format. Data is loaded progressively — partitions appear
+ * one by one as they download.
+ */
+import { Suspense, useMemo } from 'react';
+import { useAtomValue } from 'jotai';
+import { SparkRoot, SparkSplat } from './spark-r3f';
+import {
+  useRefinementSplat,
+  type ParsedPartition,
+} from '@/hooks/useRefinementSplat';
+import { SplatFileType } from '@sparkjsdev/spark';
+import {
+  domainDataAtom,
+  domainDataItemsAtom,
+} from '@/store/domainStore';
+import { splatVisibleAtom } from '@/store/visualizationStore';
+import type { SplatEffect } from '@/types/splat';
+
+/** All available reveal animation effects */
+const REVEAL_EFFECTS: SplatEffect[] = ['Magic', 'Spread', 'Unroll', 'Twister', 'Rain'];
+
+/** Pick a random reveal effect */
+function randomRevealEffect(): SplatEffect {
+  return REVEAL_EFFECTS[Math.floor(Math.random() * REVEAL_EFFECTS.length)];
+}
+
+// ── Inner content component ──────────────────────────────
+
+function SplatContent({ refinementId }: { refinementId: string }) {
+  const domainData = useAtomValue(domainDataAtom);
+  const domainDataItems = useAtomValue(domainDataItemsAtom);
+  const splatVisible = useAtomValue(splatVisibleAtom);
+  // Pick a random reveal effect once per mount
+  const revealEffect = useMemo(() => randomRevealEffect(), []);
+
+  const { data, isLoading, error } = useRefinementSplat({
+    refinementId,
+    domainServerUrl: domainData?.domainServerUrl ?? '',
+    domainId: domainData?.domainInfo.id ?? '',
+    accessToken: domainData?.domainAccessToken ?? '',
+    domainDataItems,
+  });
+
+  const hasRenderableData =
+    (data?.type === 'partitions' && data.partitions.length > 0) ||
+    data?.type === 'single';
+
+  if (isLoading && !hasRenderableData) {
+    // Could render a loading indicator in 3D space here
+    return null;
+  }
+
+  if (error) {
+    console.error('[RefinementSplat] Error loading splat:', error);
+    return null;
+  }
+
+  if (!data) return null;
+
+  // ── PARTITIONED SPLAT ──────────────────────────────────
+  if (data.type === 'partitions') {
+    return (
+      <group visible={splatVisible}>
+        <SparkRoot autoUpdate={false} sceneVersion={data.partitions.length} />
+        {data.partitions.map((partition, i) => (
+          <SparkSplat
+            key={i}
+            fileBytes={partition.loadedData!}
+            position={[
+              (partition.partitionX + 0.5) * partition.partitionSize,
+              0,
+              (partition.partitionZ - 0.5) * partition.partitionSize,
+            ]}
+            rotation={[Math.PI, 0, 0]}
+            format={partition.splatFileType}
+            partitionSize={partition.partitionSize}
+            maxDistance={partition.lodType === 'fine' ? 10 : 100}
+            fadeDistance={partition.lodType === 'fine' ? 2 : 1}
+            downsampleNth={partition.lodType === 'fine' ? 5 : 10}
+            downsampleDistance={partition.lodType === 'fine' ? 6 : 30}
+            downsampleSmoothing={partition.lodType === 'fine' ? 0.6 : 0.8}
+            revealEffect={revealEffect}
+            frustumCulled={false}
+          />
+        ))}
+      </group>
+    );
+  }
+
+  // ── SINGLE-FILE SPLAT ──────────────────────────────────
+  if (data.type === 'single' && data.buffer && data.buffer.byteLength > 0) {
+    return (
+      <group visible={splatVisible}>
+        <SparkRoot autoUpdate={false} sceneVersion={0} />
+        <SparkSplat
+          fileBytes={data.buffer}
+          format={data.splatFileType}
+          rotation={[Math.PI, 0, 0]}
+          partitionSize={100}
+          maxDistance={50}
+          fadeDistance={4}
+          revealEffect={revealEffect}
+          frustumCulled={false}
+        />
+      </group>
+    );
+  }
+
+  return null;
+}
+
+// ── Exported wrapper with Suspense ───────────────────────
+
+export default function RefinementSplat({
+  refinementId,
+}: {
+  refinementId: string;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <SplatContent refinementId={refinementId} />
+    </Suspense>
+  );
+}

@@ -2,22 +2,35 @@ import { Metadata } from "next";
 import { fetchDomainInfo } from "@/app/actions";
 import ClientPage from "./ClientPage";
 import { headers } from "next/headers";
+import { isValidDomainId } from "@/utils/validation";
 
 interface Props {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
+const DEFAULT_METADATA: Metadata = {
+    title: "Real World Web domain viewer",
+    description: "RWW domain visualizer",
+};
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-    const domainId = params.id;
+    const resolvedParams = await params;
+    const domainId = resolvedParams.id;
+
+    // Skip API calls for invalid domain IDs (e.g. static asset requests like .js.map files)
+    if (!isValidDomainId(domainId)) {
+        return DEFAULT_METADATA;
+    }
+
     // Use a temporary client ID for metadata fetching
     const posemeshClientId = "metadata-fetcher-" + Math.random().toString(36).substring(7);
 
     const result = await fetchDomainInfo(domainId, posemeshClientId);
 
     // Compute absolute base URL from incoming request headers
-    const h = headers();
+    const h = await headers();
     const proto = h.get("x-forwarded-proto") ?? "https";
     const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
     const baseUrl = `${proto}://${host}`;
@@ -27,6 +40,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         const title = `Domain: ${domainInfo.name || domainId}`;
         const description = `Click to see this Real World Web domain`;
 
+        const imageUrl = `${baseUrl}/images/og-image.png`;
+
         return {
             title,
             description,
@@ -35,7 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                 description,
                 images: [
                     {
-                        url: "/images/og-image.png", // We could potentially generate a dynamic image here later
+                        url: imageUrl, // We could potentially generate a dynamic image here later
                         width: 1200,
                         height: 630,
                         alt: `3D visualization of domain ${domainInfo.name}`,
@@ -47,7 +62,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                 site: "@Auki",
                 title,
                 description,
-                images: ["/images/og-image.png"],
+                images: [imageUrl],
                 players: [
                     {
                         playerUrl: `${baseUrl}/${domainId}`,
@@ -60,12 +75,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         };
     }
 
-    return {
-        title: "Real World Web domain viewer",
-        description: "RWW domain visualizer",
-    };
+    return DEFAULT_METADATA;
 }
 
-export default function Page({ params }: Props) {
-    return <ClientPage params={params} />;
+export default async function Page({ params }: Props) {
+    const resolvedParams = await params;
+    return <ClientPage params={resolvedParams} />;
 }

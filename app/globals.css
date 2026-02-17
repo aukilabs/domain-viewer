@@ -4,31 +4,40 @@
 
 @layer base {
   :root {
-    --background: 0 0% 10%;
-    --foreground: 0 0% 100%;
+    /* Background colors */
+    --background: 0 0% 10%;        /* #191919 - Main background */
+    --foreground: 0 0% 100%;       /* #ffffff - Main text */
 
-    --card: 0 0% 16%;
-    --card-foreground: 0 0% 100%;
+    /* Card colors */
+    --card: 0 0% 16%;              /* #282828 - Card background */
+    --card-foreground: 0 0% 98%;   /* #fafafa - Card text */
 
+    /* Popover colors */
     --popover: 0 0% 16%;
     --popover-foreground: 0 0% 100%;
 
-    --primary: 9 100% 64%;
+    /* Primary colors */
+    --primary: 9 100% 64%;         /* #ff5d48 - Primary accent */
     --primary-foreground: 0 0% 100%;
 
+    /* Secondary colors */
     --secondary: 0 0% 16%;
     --secondary-foreground: 0 0% 100%;
 
+    /* Muted colors */
     --muted: 0 0% 16%;
-    --muted-foreground: 0 0% 100%;
+    --muted-foreground: 0 0% 38%;  /* #626262 - Muted text */
 
+    /* Accent colors */
     --accent: 9 100% 64%;
     --accent-foreground: 0 0% 100%;
 
+    /* Destructive colors */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 16%;
+    /* Border and input colors */
+    --border: 0 0% 16%;            /* #282828 - Borders and dividers */
     --input: 0 0% 16%;
     --ring: 9 100% 64%;
 

@@ -12,6 +12,8 @@ export function PersistedMapControls(
   const controlsRef = useRef<any>(null);
   const { camera } = useThree();
   const jotaiStore = useStore();
+  const frameCount = useRef(0);
+  const SAVE_INTERVAL = 30; // Save every 30 frames (~0.5 seconds at 60fps)
 
   const storedPoseRef = React.useRef<
     import("@/store/camera-store").CameraPose | null
@@ -26,8 +28,14 @@ export function PersistedMapControls(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Throttle camera state saving to reduce performance overhead
   useFrame(() => {
     if (!controlsRef.current) return;
+    
+    frameCount.current++;
+    if (frameCount.current < SAVE_INTERVAL) return;
+    frameCount.current = 0;
+    
     const pose = {
       position: camera.position.toArray() as [number, number, number],
       quaternion: camera.quaternion.toArray() as [

@@ -1,5 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  webpack: (config) => {
+    config.module.parser = {
+      ...config.module.parser,
+      javascript: {
+        ...config.module.parser?.javascript,
+        url: false, // disable parsing of `new URL()` syntax
+      },
+    };
+    return config;
+  },
   images: {
     unoptimized: true,
   },
