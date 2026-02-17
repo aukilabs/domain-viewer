@@ -18,7 +18,7 @@ import {
   domainDataItemsAtom,
   refinementIdAtom,
 } from "@/store/domainStore";
-import { useDomainData } from "@/hooks";
+import { useDomainData } from "@/hooks/useDomainData";
 
 /**
  * DomainLoader Component

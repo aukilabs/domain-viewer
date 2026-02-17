@@ -9,7 +9,7 @@
  * Supports both partitioned splats (with LOD: full/coarse/fine) and single-file splats,
  * including SOG compressed format (.sogs.zip).
  */
-import { SplatFileType } from '@sparkjsdev/spark';
+import type { SplatFileType } from '@sparkjsdev/spark';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { DomainDataItem } from '@/types/domain';
 
@@ -35,11 +35,16 @@ export type RefinementSplatData =
 
 // ── Helper ───────────────────────────────────────────────
 
+const SPLAT_FILE_TYPE = {
+  SPLAT: 'splat' as SplatFileType,
+  PCSOGSZIP: 'pcsogszip' as SplatFileType,
+} as const;
+
 export function dataTypeToSplatFileType(dataType: string): SplatFileType {
   if (dataType === 'splat_partition_sog' || dataType === 'splat_data_sog') {
-    return SplatFileType.PCSOGSZIP;
+    return SPLAT_FILE_TYPE.PCSOGSZIP;
   }
-  return SplatFileType.SPLAT;
+  return SPLAT_FILE_TYPE.SPLAT;
 }
 
 // ── Hook ─────────────────────────────────────────────────
