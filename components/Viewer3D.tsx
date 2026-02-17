@@ -2,6 +2,7 @@
 
 // React and hooks
 import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 
 // Three.js and React Three Fiber
 import { Canvas } from "@react-three/fiber";
@@ -36,7 +37,11 @@ import {
 // Other components
 import FPSControls from "./FPSControls";
 import { PersistedMapControls } from "./PersistedMapControls";
-import RefinementSplat from "./3d/RefinementSplat";
+
+// Spark touches `navigator` at module scope; keep it out of server rendering paths.
+const RefinementSplat = dynamic(() => import("./3d/RefinementSplat"), {
+  ssr: false,
+});
 
 interface Viewer3DProps {
   isEmbed?: boolean;

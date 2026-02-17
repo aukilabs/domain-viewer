@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * RefinementSplat.tsx — Composition (Scene Integration)
  *
@@ -15,7 +17,6 @@ import {
   useRefinementSplat,
   type ParsedPartition,
 } from '@/hooks/useRefinementSplat';
-import { SplatFileType } from '@sparkjsdev/spark';
 import {
   domainDataAtom,
   domainDataItemsAtom,

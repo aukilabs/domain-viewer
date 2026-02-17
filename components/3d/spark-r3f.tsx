@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * spark-r3f.tsx — SparkRoot & SparkSplat (Recommended Renderer)
  *
@@ -14,7 +16,8 @@ import * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useThree, useFrame, type ThreeElements } from '@react-three/fiber';
 import { Group, Vector3, WebGLRenderer } from 'three';
-import { SplatMesh, SparkRenderer, SplatFileType } from '@sparkjsdev/spark';
+import { SplatMesh, SparkRenderer } from '@sparkjsdev/spark';
+import type { SplatFileType } from '@sparkjsdev/spark';
 import useInterval from '@/hooks/useInterval';
 import { createSplatModifier } from '@/utils/splatShaders';
 import type { SplatEffect } from '@/types/splat';
