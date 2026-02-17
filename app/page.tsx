@@ -1,8 +1,10 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import Navbar from "@/components/Navbar"
-import Viewer3D from "@/components/Viewer3D"
 import Image from "next/image"
+
+const Viewer3D = dynamic(() => import("@/components/Viewer3D"), { ssr: false })
 
 export default function Home() {
   return (

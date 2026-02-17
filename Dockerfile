@@ -18,7 +18,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN git init /root
 
 COPY package*.json ./
-RUN npm ci --loglevel verbose 2>&1 || (echo "=== NPM DEBUG LOG ===" && cat /root/.npm/_logs/*-debug-0.log 2>/dev/null && exit 1)
+RUN npm ci
 COPY . .
 RUN npm run build
 
