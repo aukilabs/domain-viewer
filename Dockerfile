@@ -11,6 +11,12 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
     && rustup target add wasm32-unknown-unknown
 ENV PATH="/root/.cargo/bin:${PATH}"
 
+# Create a dummy git repo at /root so that "lefthook install" (part of
+# spark's prepare script) finds a .git dir when walking up from npm's
+# temp dir at /root/.npm/_cacache/tmp/... (npm extracts a tarball, not
+# a real git clone, so there's no .git in the temp dir itself).
+RUN git init /root
+
 COPY package*.json ./
 RUN npm ci --loglevel verbose 2>&1 || (echo "=== NPM DEBUG LOG ===" && cat /root/.npm/_logs/*-debug-0.log 2>/dev/null && exit 1)
 COPY . .
