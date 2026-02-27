@@ -1,4 +1,5 @@
 import * as amplitude from "@amplitude/analytics-browser";
+import { getOrCreatePosemeshClientId } from "./posemeshClient";
 
 type ViewContext =
   | "twitter_embed"
@@ -67,6 +68,8 @@ export function initAnalytics() {
   amplitude.init(apiKey, {
     autocapture: false,
   });
+
+  amplitude.setUserId(getOrCreatePosemeshClientId());
 
   initialized = true;
 }

@@ -22,6 +22,8 @@ export interface Portal {
   vertical_accuracy: number,
 }
 
+import { getOrCreatePosemeshClientId } from "@/lib/posemeshClient";
+
 /**
  * Client-side API wrapper for interacting with the Posemesh domain services.
  * Handles authentication and data fetching for domain-related operations.
@@ -29,8 +31,8 @@ export interface Portal {
 class PosemeshClientApi {
   public readonly posemeshClientId: string
 
-  constructor(posemeshClientId?: string) {
-    this.posemeshClientId = posemeshClientId || this.getOrCreateClientId()
+  constructor() {
+    this.posemeshClientId = getOrCreatePosemeshClientId()
   }
 
   /**
@@ -119,32 +121,6 @@ class PosemeshClientApi {
     }
   }
 
-  /**
-   * Gets an existing posemesh client ID from storage or creates a new one.
-   * Checks multiple storage locations (localStorage, sessionStorage, cookies)
-   * for maximum persistence across browser sessions.
-   * 
-   * @returns string - The posemesh client ID, either retrieved or newly generated
-   */
-  private getOrCreateClientId(): string {
-    // Get or create posemesh_client_id from multiple storage options
-    let posemeshClientId = localStorage.getItem('posemesh_client_id') || 
-                          sessionStorage.getItem('posemesh_client_id') ||
-                          document.cookie
-                            .split('; ')
-                            .find(row => row.startsWith('posemesh_client_id='))
-                            ?.split('=')[1];
-
-    if (!posemeshClientId) {
-      posemeshClientId = crypto.randomUUID();
-      // Store in multiple places for persistence
-      localStorage.setItem('posemesh_client_id', posemeshClientId);
-      sessionStorage.setItem('posemesh_client_id', posemeshClientId);
-      document.cookie = `posemesh_client_id=${posemeshClientId}; path=/; max-age=31536000`; // 1 year expiry
-    }
-
-    return posemeshClientId;
-  }
 }
 
 export default PosemeshClientApi

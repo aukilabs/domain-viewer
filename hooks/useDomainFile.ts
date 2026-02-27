@@ -7,7 +7,6 @@ export interface UseDomainFileParams extends Omit<DownloadOptions, "raw"> {
   domainId: string;
   fileId: string;
   accessToken: string;
-  posemeshClientId: string;
   enabled?: boolean;
   raw?: boolean;
 }
@@ -35,7 +34,6 @@ export interface UseDomainFileResult {
  * @param params.domainId - Unique identifier of the domain
  * @param params.fileId - Unique identifier of the file to download
  * @param params.accessToken - Authentication token for the domain
- * @param params.posemeshClientId - Client identifier for API tracking
  * @param params.enabled - Whether the query should run (default: true)
  * @param params.raw - Whether to return raw binary data (default: true)
  * @param params.maxRetries - Maximum number of retry attempts (default: 3)
@@ -53,7 +51,6 @@ export interface UseDomainFileResult {
  *     domainId: domainData.domainInfo.id,
  *     fileId: "navmesh-file-id",
  *     accessToken: domainData.domainAccessToken,
- *     posemeshClientId: "client-id",
  *   });
  * 
  *   if (isLoading) return <LoadingSpinner />;
@@ -69,7 +66,6 @@ export function useDomainFile({
   domainId,
   fileId,
   accessToken,
-  posemeshClientId,
   enabled = true,
   raw = true,
   maxRetries = 3,
@@ -90,7 +86,6 @@ export function useDomainFile({
         domainId,
         fileId,
         accessToken,
-        posemeshClientId,
         {
           raw,
           maxRetries,
@@ -115,8 +110,7 @@ export function useDomainFile({
         domainServerUrl &&
         domainId &&
         fileId &&
-        accessToken &&
-        posemeshClientId
+        accessToken
     ),
     staleTime: 10 * 60 * 1000, // 10 minutes
     retry: maxRetries,

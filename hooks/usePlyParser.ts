@@ -44,7 +44,6 @@ export interface UsePlyParserResult {
  *     domainId,
  *     fileId: "pointcloud-file-id",
  *     accessToken,
- *     posemeshClientId,
  *   });
  * 
  *   // Then parse it into Three.js geometry
