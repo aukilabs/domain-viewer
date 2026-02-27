@@ -8,20 +8,21 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ToggleVisibility } from "@/components/ToggleVisibility"
 import { useAtomValue } from "jotai"
 import { domainInfoAtom } from "@/store/domainStore"
+import { useAnalytics } from "@/hooks/useAnalytics"
 
 const DomainInfo = memo(function DomainInfo() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(true)
   const domainInfo = useAtomValue(domainInfoAtom)
+  const { trackFieldCopied } = useAnalytics()
 
-  // Early return if domain info hasn't loaded yet
   if (!domainInfo) {
     return null
   }
 
-  const copyToClipboard = async (text: string) => {
+  const copyToClipboard = async (text: string, field: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      // You could add a toast notification here
+      trackFieldCopied(domainInfo.id, field)
     } catch (err) {
       console.error("Failed to copy text: ", err)
     }
@@ -43,7 +44,7 @@ const DomainInfo = memo(function DomainInfo() {
               icon={Database}
               label="Domain ID"
               value={domainInfo.id}
-              onCopy={() => copyToClipboard(domainInfo.id)}
+              onCopy={() => copyToClipboard(domainInfo.id, "id")}
               mono
             />
 
@@ -51,21 +52,21 @@ const DomainInfo = memo(function DomainInfo() {
               icon={Globe}
               label="Domain Name"
               value={domainInfo.name}
-              onCopy={() => copyToClipboard(domainInfo.name)}
+              onCopy={() => copyToClipboard(domainInfo.name, "name")}
             />
 
             <InfoRow
               icon={Link}
               label="Domain server address"
               value={domainInfo.url}
-              onCopy={() => copyToClipboard(domainInfo.url)}
+              onCopy={() => copyToClipboard(domainInfo.url, "server_address")}
             />
 
             <InfoRow
               icon={Clock}
               label="Created at"
               value={domainInfo.createdAt}
-              onCopy={() => copyToClipboard(domainInfo.createdAt)}
+              onCopy={() => copyToClipboard(domainInfo.createdAt, "created_at")}
               formatValue={(val) => new Date(val).toLocaleString()}
             />
 
@@ -73,7 +74,7 @@ const DomainInfo = memo(function DomainInfo() {
               icon={Clock}
               label="Last updated at"
               value={domainInfo.updatedAt}
-              onCopy={() => copyToClipboard(domainInfo.updatedAt)}
+              onCopy={() => copyToClipboard(domainInfo.updatedAt, "updated_at")}
               formatValue={(val) => new Date(val).toLocaleString()}
             />
           </CollapsibleContent>

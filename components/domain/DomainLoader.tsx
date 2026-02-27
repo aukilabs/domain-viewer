@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAtom, useSetAtom } from "jotai";
 import {
   domainDataAtom,
@@ -19,6 +19,12 @@ import {
   refinementIdAtom,
 } from "@/store/domainStore";
 import { useDomainData } from "@/hooks/useDomainData";
+import { useAnalytics } from "@/hooks/useAnalytics";
+import {
+  DataNotFoundError,
+  NetworkError,
+  AuthenticationError,
+} from "@/services/errors";
 
 /**
  * DomainLoader Component
@@ -36,6 +42,9 @@ import { useDomainData } from "@/hooks/useDomainData";
  * @param props.domainId - The unique identifier for the domain to load
  */
 export default function DomainLoader({ domainId }: DomainLoaderProps) {
+  const { trackDomainLoaded, trackDomainLoadFailed } = useAnalytics();
+  const loadStartRef = useRef<number>(Date.now());
+
   // Domain data atom setters
   const setDomainData = useSetAtom(domainDataAtom);
   const setPointCloudData = useSetAtom(pointCloudDataAtom);
@@ -51,6 +60,10 @@ export default function DomainLoader({ domainId }: DomainLoaderProps) {
   const setRefinementId = useSetAtom(refinementIdAtom);
   const setLoadingError = useSetAtom(loadingErrorAtom);
   const setErrorDetails = useSetAtom(errorDetailsAtom);
+
+  useEffect(() => {
+    loadStartRef.current = Date.now();
+  }, [domainId]);
 
   // Use the useDomainData hook for data fetching
   const { data, isLoading, isError, error } = useDomainData({
@@ -79,18 +92,33 @@ export default function DomainLoader({ domainId }: DomainLoaderProps) {
         timestamp: Date.now(),
         domainId,
       });
+
+      let errorType: "not_found" | "network" | "access_denied" | "unknown" = "unknown";
+      if (error instanceof DataNotFoundError) errorType = "not_found";
+      else if (error instanceof NetworkError) errorType = "network";
+      else if (error instanceof AuthenticationError) errorType = "access_denied";
+      trackDomainLoadFailed(domainId, errorType);
     } else if (!isError) {
-      // Clear errors when not in error state
       setLoadingError(null);
       setErrorDetails(null);
     }
-  }, [isError, error, domainId, setLoadingError, setErrorDetails]);
+  }, [isError, error, domainId, setLoadingError, setErrorDetails, trackDomainLoadFailed]);
 
   // Update atoms when data is loaded successfully
   useEffect(() => {
     if (data) {
       console.log("[DomainLoader] Updating atoms with loaded data");
-      
+
+      trackDomainLoaded({
+        domain_id: domainId,
+        load_time_ms: Date.now() - loadStartRef.current,
+        has_splat: !!data.splatData || !!data.refinementId,
+        has_nav_mesh: !!data.navMesh,
+        has_occlusion_mesh: !!data.occlusionMesh,
+        portal_count: data.portals.length,
+        point_count: data.pointCloud ? data.pointCloud.byteLength : 0,
+      });
+
       // Clear splat state before updating to prevent stale data
       setSplatData(null);
       setSplatArrayBuffer(null);
@@ -120,6 +148,7 @@ export default function DomainLoader({ domainId }: DomainLoaderProps) {
     }
   }, [
     data,
+    domainId,
     setDomainData,
     setPortals,
     setNavMeshData,
@@ -130,6 +159,7 @@ export default function DomainLoader({ domainId }: DomainLoaderProps) {
     setSplatArrayBuffer,
     setDomainDataItems,
     setRefinementId,
+    trackDomainLoaded,
   ]);
 
   return null;
