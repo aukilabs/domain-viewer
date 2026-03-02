@@ -4,6 +4,7 @@
 .github
 .gitignore
 .gitmodules
+node_modules
 .idea
 README.md
 Dockerfile

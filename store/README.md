@@ -57,7 +57,7 @@ Manages visibility states for all 3D visualization layers.
 - `navMeshVisibleAtom` - Navigation mesh visibility (default: true)
 - `occlusionVisibleAtom` - Occlusion mesh visibility (default: true)
 - `pointCloudVisibleAtom` - Point cloud visibility (default: true)
-- `splatVisibleAtom` - Gaussian splat visibility (default: true)
+- `splatVisibleAtom` - Gaussian splat visibility (default: false — opt-in for performance)
 
 #### Derived Atoms
 - `allVisibleAtom` - Boolean: all layers visible
