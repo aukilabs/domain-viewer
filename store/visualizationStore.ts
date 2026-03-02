@@ -80,7 +80,7 @@ export const pointCloudVisibleAtom = atom<boolean>(true);
  * const [splatVisible, setSplatVisible] = useAtom(splatVisibleAtom);
  * ```
  */
-export const splatVisibleAtom = atom<boolean>(true);
+export const splatVisibleAtom = atom<boolean>(false);
 
 // ============================================================================
 // Derived Atoms - Computed Visibility States

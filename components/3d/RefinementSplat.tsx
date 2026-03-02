@@ -12,7 +12,7 @@
  */
 import { Suspense, useMemo } from 'react';
 import { useAtomValue } from 'jotai';
-import { SparkRoot, SparkSplat } from './spark-r3f';
+import { SparkRenderer, SplatMesh } from '@/components/3d/spark-r3f';
 import {
   useRefinementSplat,
   type ParsedPartition,
@@ -69,11 +69,11 @@ function SplatContent({ refinementId }: { refinementId: string }) {
   if (data.type === 'partitions') {
     return (
       <group visible={splatVisible}>
-        <SparkRoot autoUpdate={false} sceneVersion={data.partitions.length} />
+        <SparkRenderer autoUpdate={false} sceneVersion={data.partitions.length} />
         {data.partitions.map((partition, i) => (
-          <SparkSplat
+          <SplatMesh
             key={i}
-            fileBytes={partition.loadedData!}
+            fileBytes={partition.loadedData!.slice(0)}
             position={[
               (partition.partitionX + 0.5) * partition.partitionSize,
               0,
@@ -99,9 +99,9 @@ function SplatContent({ refinementId }: { refinementId: string }) {
   if (data.type === 'single' && data.buffer && data.buffer.byteLength > 0) {
     return (
       <group visible={splatVisible}>
-        <SparkRoot autoUpdate={false} sceneVersion={0} />
-        <SparkSplat
-          fileBytes={data.buffer}
+        <SparkRenderer autoUpdate={false} sceneVersion={0} />
+        <SplatMesh
+          fileBytes={data.buffer.slice(0)}
           format={data.splatFileType}
           rotation={[Math.PI, 0, 0]}
           partitionSize={100}
@@ -124,6 +124,12 @@ export default function RefinementSplat({
 }: {
   refinementId: string;
 }) {
+  const splatVisible = useAtomValue(splatVisibleAtom);
+
+  if (!splatVisible) {
+    return null;
+  }
+
   return (
     <Suspense fallback={null}>
       <SplatContent refinementId={refinementId} />
