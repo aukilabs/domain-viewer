@@ -1,5 +1,6 @@
 # Build stage
 FROM node:20-alpine AS builder
+ARG NEXT_PUBLIC_AMPLITUDE_API_KEY=__NEXT_PUBLIC_AMPLITUDE_API_KEY__
 WORKDIR /app
 RUN apk add --no-cache git bash curl build-base
 
@@ -20,6 +21,7 @@ RUN git init /root
 COPY package*.json ./
 RUN npm ci
 COPY . .
+ENV NEXT_PUBLIC_AMPLITUDE_API_KEY=$NEXT_PUBLIC_AMPLITUDE_API_KEY
 RUN npm run build
 
 # Production stage
@@ -36,9 +38,11 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
+RUN chmod 755 /usr/local/bin/docker-entrypoint.sh
 
 USER nextjs
 
@@ -47,4 +51,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "server.js"]

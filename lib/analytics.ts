@@ -60,7 +60,7 @@ export function initAnalytics() {
   if (initialized) return;
 
   const apiKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY;
-  if (!apiKey) {
+  if (!apiKey || apiKey.startsWith("__NEXT_PUBLIC_")) {
     console.warn("[Analytics] NEXT_PUBLIC_AMPLITUDE_API_KEY not set, skipping init");
     return;
   }

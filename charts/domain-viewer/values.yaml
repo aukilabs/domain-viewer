@@ -29,6 +29,18 @@ k8s-service:
   envVars:
     AUKI_API_SERVER: http://api
     AUKI_DDS_SERVER: http://dds
+    NEXT_PUBLIC_AMPLITUDE_API_KEY: ""
+  configMaps:
+    domain-viewer:
+      as: volume
+      mountPath: /docker-entrypoint.d/40-next-public-env-vars.sh
+      subPath: 40-next-public-env-vars.sh
+      items:
+        40-next-public-env-vars.sh:
+          envVarName: 40-next-public-env-vars.sh
+          fileMode: 500
+          filePath: 40-next-public-env-vars.sh
+      name: domain-viewer
   secrets:
     domain-viewer:
       as: envFrom

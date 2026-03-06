@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: domain-viewer
+data:
+  40-next-public-env-vars.sh: |
+    #!/bin/sh
+    set -eu
+
+    var_name="NEXT_PUBLIC_AMPLITUDE_API_KEY"
+    eval_cmd="echo \"\$${var_name}\""
+    var_value="$(eval "${eval_cmd}")"
+    sed_script="s~__${var_name}__~${var_value}~g"
+
+    if [ -d /app/.next ]; then
+      find /app/.next -type f -name '*.js' -exec sed -i "${sed_script}" {} \;
+    fi
+
+    if [ -f /app/server.js ]; then
+      sed -i "${sed_script}" /app/server.js
+    fi

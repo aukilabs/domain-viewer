@@ -71,8 +71,10 @@ jobs:
           tags="-t aukilabs/${IMAGE_NAME}:${{ github.sha }} -t aukilabs/${IMAGE_NAME}:${ref_name_tag}"
           test "${{ inputs.enable_tag_latest }}" = "true" && tags="${tags} -t aukilabs/${IMAGE_NAME}:latest"
 
+          next_build_args="--build-arg NEXT_PUBLIC_AMPLITUDE_API_KEY=__NEXT_PUBLIC_AMPLITUDE_API_KEY__"
+
           docker buildx create --use
-          docker buildx build --platform linux/amd64 $tags --push .
+          docker buildx build $next_build_args --platform linux/amd64 $tags --push .
 
       - name: Authenticate ArgoCD
         uses: clowdhaus/argo-cd-action@v2.3.0
