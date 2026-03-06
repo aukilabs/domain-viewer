@@ -29,7 +29,7 @@ import { splatVisibleAtom } from '@/store/visualizationStore';
 import type { SplatEffect } from '@/types/splat';
 
 /** All available reveal animation effects */
-const REVEAL_EFFECTS: SplatEffect[] = ['Magic', 'Spread', 'Unroll', 'Twister'];
+const REVEAL_EFFECTS: SplatEffect[] = ['Magic'];
 
 /** Pick a random reveal effect */
 function randomRevealEffect(): SplatEffect {
