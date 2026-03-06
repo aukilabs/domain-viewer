@@ -38,7 +38,7 @@ k8s-service:
       items:
         40-next-public-env-vars.sh:
           envVarName: 40-next-public-env-vars.sh
-          fileMode: 500
+          fileMode: 444
           filePath: 40-next-public-env-vars.sh
       name: domain-viewer
   secrets:
