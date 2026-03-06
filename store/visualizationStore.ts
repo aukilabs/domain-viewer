@@ -73,14 +73,14 @@ export const pointCloudVisibleAtom = atom<boolean>(true);
 
 /**
  * Controls visibility of the splat (Gaussian Splatting) in the 3D viewer.
- * Default: true (splat is visible by default when available)
+ * Default: true (splat renders on page load when available)
  * 
  * @example
  * ```tsx
  * const [splatVisible, setSplatVisible] = useAtom(splatVisibleAtom);
  * ```
  */
-export const splatVisibleAtom = atom<boolean>(false);
+export const splatVisibleAtom = atom<boolean>(true);
 
 // ============================================================================
 // Derived Atoms - Computed Visibility States

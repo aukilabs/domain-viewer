@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { useGLTF } from "@react-three/drei";
 import { useAtomValue } from "jotai";
 import { portalsAtom } from "@/store/domainStore";
+import { portalsVisibleAtom } from "@/store/visualizationStore";
 import { matrixFromPose } from "@/utils/three-utils";
 
 /**
@@ -13,6 +14,7 @@ import { matrixFromPose } from "@/utils/three-utils";
  * Uses a 3D model loaded from QR.glb and reads portal data from Jotai atoms.
  */
 export default function PortalRenderer() {
+  const visible = useAtomValue(portalsVisibleAtom);
   const portals = useAtomValue(portalsAtom);
   const { scene: gltfScene } = useGLTF("/QR.glb");
   const { scene } = useThree();
@@ -20,7 +22,7 @@ export default function PortalRenderer() {
   const matrix = new THREE.Matrix4();
 
   useEffect(() => {
-    if (!gltfScene) return;
+    if (!gltfScene || !visible) return;
 
     portals?.forEach((portal) => {
       let model: THREE.Group;
@@ -74,7 +76,7 @@ export default function PortalRenderer() {
       });
       modelsRef.current.clear();
     };
-  }, [gltfScene, scene, portals]);
+  }, [gltfScene, scene, portals, visible]);
 
   return null;
 }

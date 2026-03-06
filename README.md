@@ -23,7 +23,8 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 - Point cloud data rendering with color support
 - Navigation and occlusion mesh visualization
 - Portal location markers
-- Visibility toggles for different data layers (splats off by default for performance)
+- Visibility toggles for different data layers (all layers on by default, including splats)
+- **Fullscreen loading overlay** with blur effect — stays visible until all data (including splat binaries) finishes downloading
 - Auto-rotating camera when idle
 - **FPS Camera Mode (First Person View)**
 - **Persisted Camera State**
@@ -84,6 +85,7 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 ├── types/ # TypeScript type definitions
 │ └── splat.ts # SplatEffect type for reveal animations
 ├── store/ # Global state management
+│ ├── domainStore.ts # Domain data, loading states (incl. splatLoadingAtom)
 │ ├── visualizationStore.ts # Visibility toggles (portals, meshes, splat, etc.)
 │ └── camera-store.ts # Camera position and target state
 ├── utils/ # Utility functions

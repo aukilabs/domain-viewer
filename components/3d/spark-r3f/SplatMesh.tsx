@@ -116,13 +116,6 @@ export function SplatMesh({
       );
   }, [splatMesh, maxDistance, fadeDistance, downsampleNth, downsampleDistance, downsampleSmoothing]);
 
-  const dispose = () => {
-    setSplatMesh((prev) => {
-      prev?.dispose?.();
-      return null;
-    });
-  };
-
   const cullCheckIntervalMs = 80 + Math.floor(Math.random() * 20);
   useInterval(() => {
     if (splatMesh && groupRef.current && maxDistance && maxDistance > 0) {
@@ -138,8 +131,8 @@ export function SplatMesh({
   }, cullCheckIntervalMs);
 
   return (
-    <group {...groupProps} dispose={dispose} ref={groupRef}>
-      {splatMesh && !culled && <primitive object={splatMesh} />}
+    <group {...groupProps} ref={groupRef}>
+      {splatMesh && !culled && <primitive object={splatMesh} dispose={null} />}
     </group>
   );
 }

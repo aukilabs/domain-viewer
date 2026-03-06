@@ -17,7 +17,7 @@ export function SparkRenderer({
 }: SparkRendererProps) {
   const { gl, scene } = useThree();
   const sparkModule = useSparkModule();
-  const prevSceneVersionRef = useRef<number>(0);
+  const prevSceneVersionRef = useRef<number>(-1);
 
   const sparkRenderer = useMemo(() => {
     if (!sparkModule) return null;

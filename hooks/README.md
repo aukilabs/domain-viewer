@@ -217,7 +217,7 @@ function SplatViewer({ refinementId }: { refinementId: string }) {
 }
 ```
 
-**Note:** Always pass `.slice(0)` when handing buffers to `SplatMesh` — the Spark engine transfers the `ArrayBuffer` to a Web Worker (detaching it), so reusing a cached buffer without cloning would fail on subsequent renders.
+**Note:** Always `.slice(0)` buffers before passing to `SplatMesh` — the Spark engine transfers the `ArrayBuffer` to a Web Worker (detaching it), so reusing a cached buffer without cloning would fail. In `RefinementSplat.tsx` these copies are wrapped in `useMemo` keyed on `data` so that buffer references stay stable across re-renders and don't trigger mesh recreation / animation replays.
 
 #### `useRefinementHasSplat`
 
