@@ -6,6 +6,7 @@
 import { DownloadOptions } from '@/types/domain';
 import { FileDownloadError, NetworkError, AuthenticationError, TimeoutError, wrapError } from './errors';
 import { retryWithBackoff, isRetryableError } from '@/utils/retry';
+import { getOrCreatePosemeshClientId } from '@/lib/posemeshClient';
 
 /**
  * Default timeout for file downloads (60 seconds).
@@ -119,7 +120,6 @@ export class FileService {
    * @param domainId - Unique identifier of the domain
    * @param fileId - Unique identifier of the file to download
    * @param accessToken - Authentication token for the domain
-   * @param posemeshClientId - Client identifier for API tracking
    * @param options - Download options
    * @returns Promise resolving to the file data as ArrayBuffer
    * @throws {FileDownloadError} If download fails
@@ -132,8 +132,7 @@ export class FileService {
    *   'https://domain.example.com',
    *   'domain-123',
    *   'file-456',
-   *   'access-token',
-   *   'client-id'
+   *   'access-token'
    * );
    * ```
    */
@@ -142,12 +141,11 @@ export class FileService {
     domainId: string,
     fileId: string,
     accessToken: string,
-    posemeshClientId: string,
     options: DownloadOptions = {}
   ): Promise<ArrayBuffer> {
     const raw = options.raw !== undefined ? (options.raw ? 1 : 0) : 1;
     const url = this.buildFileUrl(domainServerUrl, domainId, fileId, raw);
-    const headers = this.createHeaders(accessToken, posemeshClientId);
+    const headers = this.createHeaders(accessToken);
 
     console.log(`[${new Date().toISOString()}] Downloading domain file: ${fileId}`);
 
@@ -225,18 +223,11 @@ export class FileService {
     return `${domainServerUrl}/api/v1/domains/${domainId}/data/${fileId}?raw=${raw}`;
   }
 
-  /**
-   * Creates headers for domain file requests.
-   * 
-   * @param accessToken - Authentication token
-   * @param posemeshClientId - Client identifier
-   * @returns Headers object for fetch request
-   */
-  private createHeaders(accessToken: string, posemeshClientId: string): HeadersInit {
+  private createHeaders(accessToken: string): HeadersInit {
     return {
       Authorization: `Bearer ${accessToken}`,
       'User-Agent': 'domain-viewer',
-      'posemesh-client-id': posemeshClientId,
+      'posemesh-client-id': getOrCreatePosemeshClientId(),
     };
   }
 

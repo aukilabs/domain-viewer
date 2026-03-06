@@ -19,6 +19,7 @@ import {
   domainIdAtom,
   splatDataAtom,
 } from "@/store/domainStore"
+import { useAnalytics } from "@/hooks/useAnalytics"
 
 export function ToggleVisibility() {
   const [isOpen, setIsOpen] = React.useState(true)
@@ -36,22 +37,31 @@ export function ToggleVisibility() {
   const domainId = useAtomValue(domainIdAtom)
   const splatData = useAtomValue(splatDataAtom)
 
-  // Memoize toggle buttons to prevent recreation on every render
+  const { trackLayerToggled } = useAnalytics()
+
   const toggleButtons = React.useMemo(() => {
+    const makeToggle = (
+      layer: string,
+      visible: boolean,
+      setter: (fn: (prev: boolean) => boolean) => void,
+    ) => () => {
+      setter(prev => !prev);
+      if (domainId) trackLayerToggled(domainId, layer, !visible);
+    };
+
     const buttons = [
-      { icon: QrCode, label: "Toggle Portals", visible: portalsVisible, onClick: () => setPortalsVisible(prev => !prev) },
-      { icon: Map, label: "Toggle Navigation Mesh", visible: navMeshVisible, onClick: () => setNavMeshVisible(prev => !prev) },
-      { icon: Box, label: "Toggle Occlusion", visible: occlusionVisible, onClick: () => setOcclusionVisible(prev => !prev) },
-      { icon: Cloud, label: "Toggle Point Cloud", visible: pointCloudVisible, onClick: () => setPointCloudVisible(prev => !prev) },
+      { icon: QrCode, label: "Toggle Portals", visible: portalsVisible, onClick: makeToggle("portals", portalsVisible, setPortalsVisible) },
+      { icon: Map, label: "Toggle Navigation Mesh", visible: navMeshVisible, onClick: makeToggle("nav_mesh", navMeshVisible, setNavMeshVisible) },
+      { icon: Box, label: "Toggle Occlusion", visible: occlusionVisible, onClick: makeToggle("occlusion", occlusionVisible, setOcclusionVisible) },
+      { icon: Cloud, label: "Toggle Point Cloud", visible: pointCloudVisible, onClick: makeToggle("point_cloud", pointCloudVisible, setPointCloudVisible) },
     ];
 
-    // Add splat button only if splat data exists
     if (hasSplat) {
       buttons.push({
         icon: Sparkles,
         label: "Toggle Gaussian Splat",
         visible: splatVisible,
-        onClick: () => setSplatVisible(prev => !prev),
+        onClick: makeToggle("splat", splatVisible, setSplatVisible),
       });
     }
 
@@ -62,7 +72,7 @@ export function ToggleVisibility() {
     occlusionVisible, setOcclusionVisible,
     pointCloudVisible, setPointCloudVisible,
     splatVisible, setSplatVisible,
-    hasSplat
+    hasSplat, domainId, trackLayerToggled
   ]);
 
   return (
