@@ -140,6 +140,9 @@ AUKI_APP_KEY=your_app_key_here
 AUKI_APP_SECRET=your_app_secret_here
 AUKI_API_SERVER=https://api.auki.network         # or your provided API server
 AUKI_DDS_SERVER=https://dds.auki.network         # or your provided DDS server
+
+# Optional — Amplitude analytics (see "Analytics" section below)
+NEXT_PUBLIC_AMPLITUDE_API_KEY=your_amplitude_api_key
 ```
 
 4. Run the development server:
@@ -195,6 +198,35 @@ docker compose build
 4. **Press 'F' to toggle FPS camera mode (WASD to move, Mouse to look)**
 5. Toggle visibility of different layers using the buttons in the bottom left panel
 6. View domain details in the expandable panel
+
+## Analytics
+
+This project includes optional [Amplitude](https://amplitude.com) analytics integration. When configured, the following events are tracked:
+
+| Event | Trigger |
+|---|---|
+| `page_viewed` | Every route navigation |
+| `session_started` | Once per browser session |
+| `domain_search_initiated` | User submits a domain ID via the navbar |
+| `domain_loaded` | Domain data fetched successfully (includes load time, data availability metadata) |
+| `domain_load_failed` | Domain fetch errors (categorized as `not_found`, `network`, `access_denied`) |
+| `viewer_interaction_started` | First pointer or scroll interaction with the 3D viewer per domain |
+| `camera_mode_switched` | Toggling between map and FPS camera modes |
+| `layer_toggled` | Showing/hiding a visualization layer |
+| `field_copied` | Copying a value from the domain details panel |
+| `preview_viewed` | Loading the embed/preview route (includes referrer and embed context) |
+
+Every event automatically includes `view_context` (e.g. `twitter_embed`, `direct`) and `referrer_domain` properties. Country, browser, device, and OS are captured by Amplitude automatically via IP geolocation and user-agent.
+
+### Setup
+
+To enable analytics, add your Amplitude browser API key to `.env.local`:
+
+```bash
+NEXT_PUBLIC_AMPLITUDE_API_KEY=your_amplitude_api_key
+```
+
+If this variable is not set, analytics initialization is skipped and no events are sent. The app runs normally without it.
 
 ## Contributing
 

@@ -1,7 +1,7 @@
 "use client";
 
 // React and hooks
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 
 // Three.js and React Three Fiber
@@ -11,7 +11,7 @@ import { Canvas } from "@react-three/fiber";
 import { cameraControlModeAtom } from "@/store/camera-store";
 
 // Jotai atoms - domain store
-import { domainDataAtom, refinementIdAtom } from "@/store/domainStore";
+import { domainDataAtom, domainIdAtom, splatDataAtom, refinementIdAtom } from "@/store/domainStore";
 
 // Jotai hooks
 import { useAtom, useAtomValue } from "jotai";
@@ -32,6 +32,9 @@ import {
 import FPSControls from "./FPSControls";
 import { PersistedMapControls } from "./PersistedMapControls";
 
+// Analytics
+import { useAnalytics } from "@/hooks/useAnalytics";
+
 // Spark touches `navigator` at module scope; keep it out of server rendering paths.
 const RefinementSplat = dynamic(() => import("./3d/RefinementSplat"), {
   ssr: false,
@@ -50,11 +53,30 @@ interface Viewer3DProps {
 export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
   // Read domain data from atoms
   const domainData = useAtomValue(domainDataAtom);
+  const domainId = useAtomValue(domainIdAtom);
+  const splatData = useAtomValue(splatDataAtom);
   const refinementId = useAtomValue(refinementIdAtom);
   
   const [controlMode, setControlMode] = useAtom(cameraControlModeAtom);
   const controlModeRef = useMemo(() => ({ current: controlMode }), [controlMode]);
   const fpsStart = useMemo<[number, number, number]>(() => [0, 1.6, 3], []);
+
+  // Analytics
+  const { trackViewerInteractionStarted, trackCameraModeSwitched } = useAnalytics();
+  const interactionFiredRef = useRef<string | null>(null);
+
+  // Fire viewer_interaction_started once per domain load
+  useEffect(() => {
+    if (!domainId) return;
+    // Reset when domain changes
+    interactionFiredRef.current = null;
+  }, [domainId]);
+
+  const handleFirstInteraction = useCallback(() => {
+    if (!domainId || interactionFiredRef.current === domainId) return;
+    interactionFiredRef.current = domainId;
+    trackViewerInteractionStarted(domainId, controlModeRef.current);
+  }, [domainId, controlModeRef, trackViewerInteractionStarted]);
 
   // Track whether the pointer is currently locked (for overlay visibility)
   const [pointerLocked, setPointerLocked] = useState(false);
@@ -70,17 +92,20 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "KeyF" && !isEmbed) {
-        if (controlModeRef.current === "fps") {
+        const fromMode = controlModeRef.current;
+        const toMode = fromMode === "fps" ? "map" : "fps";
+        if (fromMode === "fps") {
           document.exitPointerLock();
-          setControlMode("map");
-        } else {
-          setControlMode("fps");
+        }
+        setControlMode(toMode);
+        if (domainId) {
+          trackCameraModeSwitched(domainId, fromMode, toMode);
         }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isEmbed, setControlMode, controlModeRef]);
+  }, [isEmbed, setControlMode, controlModeRef, domainId, trackCameraModeSwitched]);
 
   const handleOverlayClick = useCallback(() => {
     const canvas = document.querySelector("canvas");
@@ -92,7 +117,7 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
   const showOverlay = controlMode === "fps" && !pointerLocked;
 
   return (
-    <div className="w-full h-full bg-neutral-50 dark:bg-neutral-900 touch-none relative" tabIndex={0}>
+    <div className="w-full h-full bg-neutral-50 dark:bg-neutral-900 touch-none relative" tabIndex={0} onPointerDown={handleFirstInteraction} onWheel={handleFirstInteraction}>
       <Canvas camera={{ position: [15, 15, 15], fov: 50 }} gl={{ alpha: true }}>
         <Scene />
         <PointCloudRenderer />

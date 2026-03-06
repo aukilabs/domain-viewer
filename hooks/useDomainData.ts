@@ -4,7 +4,6 @@ import { DomainDataCollection } from "@/types/domain";
 
 export interface UseDomainDataParams {
   domainId: string;
-  posemeshClientId?: string;
   enabled?: boolean;
 }
 
@@ -27,7 +26,6 @@ export interface UseDomainDataResult {
  * 
  * @param params - Hook parameters
  * @param params.domainId - Unique identifier of the domain to load
- * @param params.posemeshClientId - Optional client identifier for API tracking
  * @param params.enabled - Whether the query should run (default: true)
  * 
  * @returns Query result with data, loading, error, and success states
@@ -52,21 +50,14 @@ export interface UseDomainDataResult {
  */
 export function useDomainData({
   domainId,
-  posemeshClientId,
   enabled = true,
 }: UseDomainDataParams): UseDomainDataResult {
   const query = useQuery({
-    queryKey: ["domain-data", domainId, posemeshClientId],
+    queryKey: ["domain-data", domainId],
     queryFn: async () => {
-      console.log("[useDomainData] Loading domain data:", {
-        domainId,
-        posemeshClientId,
-      });
+      console.log("[useDomainData] Loading domain data:", { domainId });
 
-      const result = await domainService.loadAllDomainData(
-        domainId,
-        posemeshClientId
-      );
+      const result = await domainService.loadAllDomainData(domainId);
 
       if (!result.success) {
         throw new Error(result.error || "Failed to load domain data");

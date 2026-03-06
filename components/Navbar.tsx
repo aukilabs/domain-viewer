@@ -17,6 +17,7 @@ import {
   NetworkError, 
   AuthenticationError 
 } from "@/services/errors"
+import { useAnalytics } from "@/hooks/useAnalytics"
 
 interface NavbarProps {
   currentDomainId?: string
@@ -29,6 +30,7 @@ export default function Navbar({ currentDomainId }: NavbarProps) {
   const [validationError, setValidationError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+  const { trackDomainSearchInitiated } = useAnalytics()
 
   useEffect(() => {
     if (currentDomainId) {
@@ -69,8 +71,8 @@ export default function Navbar({ currentDomainId }: NavbarProps) {
     }
 
     try {
-      // Always just navigate to the new domain ID
       if (domainId !== currentDomainId) {
+        trackDomainSearchInitiated(domainId, "navbar")
         router.push(`/${domainId}`)
       }
     } catch (err) {

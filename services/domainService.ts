@@ -27,6 +27,7 @@ import {
   wrapError,
 } from './errors';
 import { retryWithBackoff } from '@/utils/retry';
+import { getOrCreatePosemeshClientId } from '@/lib/posemeshClient';
 
 /**
  * DomainService class for managing all domain-related operations.
@@ -35,23 +36,11 @@ import { retryWithBackoff } from '@/utils/retry';
  */
 export class DomainService {
   private readonly fileService: FileService;
-  private _posemeshClientId?: string;
 
-  constructor(posemeshClientId?: string, fileService?: FileService) {
-    this._posemeshClientId = posemeshClientId;
+  constructor(fileService?: FileService) {
     this.fileService = fileService || new FileService();
   }
 
-  /**
-   * Gets the posemesh client ID, lazily creating it if needed.
-   * This property ensures client ID is only accessed when needed, not during module initialization.
-   */
-  private get posemeshClientId(): string {
-    if (!this._posemeshClientId) {
-      this._posemeshClientId = this.getOrCreateClientId();
-    }
-    return this._posemeshClientId;
-  }
 
   /**
    * Authenticates with a domain and retrieves domain information.
@@ -72,7 +61,7 @@ export class DomainService {
     console.log(`[${new Date().toISOString()}] Authenticating domain: ${domainId}`);
 
     try {
-      const result = await fetchDomainInfo(domainId, this.posemeshClientId);
+      const result = await fetchDomainInfo(domainId, getOrCreatePosemeshClientId());
 
       if (!result.success || !result.data) {
         throw new AuthenticationError(
@@ -211,8 +200,7 @@ export class DomainService {
         domainData.domainServerUrl,
         domainData.domainInfo.id,
         metadataItem.id,
-        domainData.domainAccessToken,
-        this.posemeshClientId
+        domainData.domainAccessToken
       );
 
       const metadataText = new TextDecoder().decode(metadataBuffer);
@@ -266,8 +254,7 @@ export class DomainService {
         domainData.domainServerUrl,
         domainData.domainInfo.id,
         navMeshItem.id,
-        domainData.domainAccessToken,
-        this.posemeshClientId
+        domainData.domainAccessToken
       );
 
       return navMeshBuffer;
@@ -311,8 +298,7 @@ export class DomainService {
         domainData.domainServerUrl,
         domainData.domainInfo.id,
         occlusionMeshItem.id,
-        domainData.domainAccessToken,
-        this.posemeshClientId
+        domainData.domainAccessToken
       );
 
       return occlusionMeshBuffer;
@@ -363,8 +349,7 @@ export class DomainService {
         domainData.domainServerUrl,
         domainData.domainInfo.id,
         pointCloudItem.id,
-        domainData.domainAccessToken,
-        this.posemeshClientId
+        domainData.domainAccessToken
       );
 
       return pointCloudBuffer;
@@ -421,8 +406,7 @@ export class DomainService {
         domainData.domainServerUrl,
         domainData.domainInfo.id,
         splatItem.id,
-        domainData.domainAccessToken,
-        this.posemeshClientId
+        domainData.domainAccessToken
       );
 
       return {
@@ -452,7 +436,6 @@ export class DomainService {
    * 8. Fetch splat data (optional, requires metadata)
    * 
    * @param domainId - Unique identifier of the domain to load
-   * @param posemeshClientId - Client identifier for API tracking (optional, uses stored ID if not provided)
    * @returns Promise resolving to service result with complete domain data collection
    * 
    * @example
@@ -468,15 +451,10 @@ export class DomainService {
    */
   async loadAllDomainData(
     domainId: string,
-    posemeshClientId?: string
   ): Promise<ServiceResult<DomainDataCollection>> {
     console.log(`[${new Date().toISOString()}] Starting loadAllDomainData for domain: ${domainId}`);
 
     try {
-      // Update posemeshClientId if provided
-      if (posemeshClientId) {
-        (this as any).posemeshClientId = posemeshClientId;
-      }
 
       // 1. Authenticate with domain
       const domainData = await this.authenticateDomain(domainId);
@@ -674,46 +652,10 @@ export class DomainService {
     return {
       Authorization: `Bearer ${accessToken}`,
       'User-Agent': 'domain-viewer',
-      'posemesh-client-id': this.posemeshClientId,
+      'posemesh-client-id': getOrCreatePosemeshClientId(),
     };
   }
 
-  /**
-   * Gets an existing posemesh client ID from storage or creates a new one.
-   * Checks multiple storage locations (localStorage, sessionStorage, cookies)
-   * for maximum persistence across browser sessions.
-   * 
-   * Only works in browser environment - returns a temporary UUID on server.
-   * 
-   * @returns The posemesh client ID, either retrieved or newly generated
-   */
-  private getOrCreateClientId(): string {
-    // Check if we're in a browser environment
-    if (typeof window === 'undefined') {
-      // Server-side: return a temporary UUID
-      // This will be replaced with the actual client ID when used in the browser
-      return crypto.randomUUID();
-    }
-
-    // Get or create posemesh_client_id from multiple storage options
-    let posemeshClientId =
-      localStorage.getItem('posemesh_client_id') ||
-      sessionStorage.getItem('posemesh_client_id') ||
-      document.cookie
-        .split('; ')
-        .find((row) => row.startsWith('posemesh_client_id='))
-        ?.split('=')[1];
-
-    if (!posemeshClientId) {
-      posemeshClientId = crypto.randomUUID();
-      // Store in multiple places for persistence
-      localStorage.setItem('posemesh_client_id', posemeshClientId);
-      sessionStorage.setItem('posemesh_client_id', posemeshClientId);
-      document.cookie = `posemesh_client_id=${posemeshClientId}; path=/; max-age=31536000`; // 1 year expiry
-    }
-
-    return posemeshClientId;
-  }
 }
 
 /**
