@@ -7,13 +7,6 @@ import dynamic from "next/dynamic";
 // Three.js and React Three Fiber
 import { Canvas } from "@react-three/fiber";
 
-// Jotai atoms - visualization store
-import {
-  portalsVisibleAtom,
-  navMeshVisibleAtom,
-  occlusionVisibleAtom,
-} from "@/store/visualizationStore";
-
 // Jotai atoms - camera store
 import { cameraControlModeAtom } from "@/store/camera-store";
 
@@ -29,6 +22,7 @@ import CameraController from "./3d/controllers/CameraController";
 
 // Local components - Renderers
 import {
+  PointCloudRenderer,
   PortalRenderer,
   NavMeshRenderer,
   OcclusionMeshRenderer,
@@ -53,14 +47,10 @@ interface Viewer3DProps {
 /**
  * Main 3D visualization component that renders the domain data using Three.js.
  * Handles rendering of point clouds, portals, navigation meshes, and occlusion meshes.
- * All data and visibility states are managed through Jotai atoms.
+ * Each renderer reads its own visibility atom directly so that toggling one
+ * layer never re-renders another.
  */
 export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
-  // Read visibility states from atoms
-  const portalsVisible = useAtomValue(portalsVisibleAtom);
-  const navMeshVisible = useAtomValue(navMeshVisibleAtom);
-  const occlusionVisible = useAtomValue(occlusionVisibleAtom);
-  
   // Read domain data from atoms
   const domainData = useAtomValue(domainDataAtom);
   const domainId = useAtomValue(domainIdAtom);
@@ -130,11 +120,10 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
     <div className="w-full h-full bg-neutral-50 dark:bg-neutral-900 touch-none relative" tabIndex={0} onPointerDown={handleFirstInteraction} onWheel={handleFirstInteraction}>
       <Canvas camera={{ position: [15, 15, 15], fov: 50 }} gl={{ alpha: true }}>
         <Scene />
-        {/* Point cloud hidden per user request */}
-        {/* {pointCloudVisible && <PointCloudRenderer />} */}
-        {portalsVisible && <PortalRenderer />}
-        {occlusionVisible && <OcclusionMeshRenderer />}
-        {navMeshVisible && <NavMeshRenderer />}
+        <PointCloudRenderer />
+        <PortalRenderer />
+        <OcclusionMeshRenderer />
+        <NavMeshRenderer />
         {refinementId && domainData && (
           <RefinementSplat refinementId={refinementId} />
         )}

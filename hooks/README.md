@@ -180,6 +180,73 @@ function PointCloudRenderer({ domainData, fileId }: Props) {
 }
 ```
 
+### Gaussian Splat Hooks
+
+Hooks for loading and checking Gaussian splat data used by the Spark rendering pipeline.
+
+#### `useRefinementSplat`
+
+Loads Gaussian splat data for a given refinement. Supports both partitioned (tiled LOD) and single-file splats, including SOG compressed format. Partitions are downloaded sequentially with progressive cache updates so tiles appear as they load.
+
+**Wraps:** Direct `fetch()` calls to the domain server with React Query caching
+
+**Returns:** `{ type: 'partitions', partitions: ParsedPartition[] }` | `{ type: 'single', buffer: ArrayBuffer, splatFileType }` | `null`
+
+**Example:**
+```tsx
+import { useRefinementSplat } from "@/hooks/useRefinementSplat";
+
+function SplatViewer({ refinementId }: { refinementId: string }) {
+  const { data, isLoading, error } = useRefinementSplat({
+    refinementId,
+    domainServerUrl: "https://domain.example.com",
+    domainId: "domain-123",
+    accessToken: "token",
+    domainDataItems,
+  });
+
+  if (isLoading || !data) return null;
+
+  if (data.type === "partitions") {
+    return data.partitions.map((p, i) => (
+      <SplatMesh key={i} fileBytes={p.loadedData!.slice(0)} format={p.splatFileType} ... />
+    ));
+  }
+
+  return <SplatMesh fileBytes={data.buffer.slice(0)} format={data.splatFileType} ... />;
+}
+```
+
+**Note:** Always `.slice(0)` buffers before passing to `SplatMesh` — the Spark engine transfers the `ArrayBuffer` to a Web Worker (detaching it), so reusing a cached buffer without cloning would fail. In `RefinementSplat.tsx` these copies are wrapped in `useMemo` keyed on `data` so that buffer references stay stable across re-renders and don't trigger mesh recreation / animation replays.
+
+#### `useRefinementHasSplat`
+
+A lightweight check (no binary downloads) that returns whether a given refinement has splat data available. Useful for conditionally showing splat UI controls.
+
+**Example:**
+```tsx
+import { useRefinementHasSplat } from "@/hooks/useRefinementHasSplat";
+
+function SplatToggle({ domainDataItems, refinementId }) {
+  const hasSplat = useRefinementHasSplat(domainDataItems, refinementId);
+  if (!hasSplat) return null;
+  return <button>Toggle Splat</button>;
+}
+```
+
+#### `useInterval`
+
+A simple `setInterval` hook used by the Spark renderer components for periodic scene updates and distance-based culling checks.
+
+**Example:**
+```tsx
+import useInterval from "@/hooks/useInterval";
+
+useInterval(() => {
+  console.log("tick");
+}, 1000); // Fires every second; pass null to pause
+```
+
 ### UI Utility Hooks
 
 General-purpose utility hooks for UI state and device detection.

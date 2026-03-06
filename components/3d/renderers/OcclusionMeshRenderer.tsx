@@ -6,18 +6,20 @@ import * as THREE from "three";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 import { useAtomValue } from "jotai";
 import { occlusionMeshDataAtom } from "@/store/domainStore";
+import { occlusionVisibleAtom } from "@/store/visualizationStore";
 
 /**
  * Renders the occlusion mesh that represents physical barriers in the space.
  * Reads occlusion mesh data from Jotai atoms and manages Three.js geometry lifecycle.
  */
 export default function OcclusionMeshRenderer() {
+  const visible = useAtomValue(occlusionVisibleAtom);
   const occlusionMeshData = useAtomValue(occlusionMeshDataAtom);
   const { scene } = useThree();
   const groupRef = useRef<THREE.Group | null>(null);
 
   useEffect(() => {
-    if (!occlusionMeshData) return;
+    if (!occlusionMeshData || !visible) return;
 
     const loader = new OBJLoader();
     const objString = new TextDecoder().decode(occlusionMeshData);
@@ -68,7 +70,7 @@ export default function OcclusionMeshRenderer() {
         });
       }
     };
-  }, [occlusionMeshData, scene]);
+  }, [occlusionMeshData, scene, visible]);
 
   return null;
 }

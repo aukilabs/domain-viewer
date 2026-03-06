@@ -19,10 +19,12 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 ## Features
 
 - Interactive 3D visualization using Three.js and React Three Fiber
+- **Gaussian splat rendering** via `@sparkjsdev/spark` with dynamic loading, partitioned LOD, and reveal animations
 - Point cloud data rendering with color support
 - Navigation and occlusion mesh visualization
 - Portal location markers
-- Visibility toggles for different data layers
+- Visibility toggles for different data layers (all layers on by default, including splats)
+- **Fullscreen loading overlay** with blur effect — stays visible until all data (including splat binaries) finishes downloading
 - Auto-rotating camera when idle
 - **FPS Camera Mode (First Person View)**
 - **Persisted Camera State**
@@ -35,11 +37,13 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 - React 19
 - Three.js
 - React Three Fiber
+- **@sparkjsdev/spark** (Gaussian splat rendering engine)
 - TypeScript
 - Tailwind CSS
 - Radix UI Components
 - Lucide Icons
 - **Jotai (State Management)**
+- **React Query (@tanstack/react-query)**
 
 ## Project Structure
 ```
@@ -52,6 +56,14 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 │ └── page.tsx # Home page
 ├── components/ # React components
 │ ├── 3d/ # 3D specific components
+│ │ ├── spark-r3f/ # Gaussian splat rendering module
+│ │ │ ├── index.ts # Web entry: re-exports SparkRenderer, SplatMesh, SplatFileType
+│ │ │ ├── SparkRenderer.tsx # Initialises the Spark rendering engine
+│ │ │ ├── SplatMesh.tsx # Renders a single Gaussian splat mesh
+│ │ │ └── useSparkModule.ts # Dynamic import of @sparkjsdev/spark (SSR-safe)
+│ │ ├── renderers/ # Renderer components
+│ │ │ └── PointCloudRenderer.tsx # Point cloud renderer with vertex colors
+│ │ ├── RefinementSplat.tsx # Composition: ties splat data loading to spark renderer
 │ │ ├── FloorGrid.tsx # Infinite grid component
 │ │ └── OriginLines.tsx # XYZ axis lines
 │ ├── ui/ # Common reusable UI components
@@ -66,10 +78,18 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 │ ├── ToggleVisibility.tsx # Layer visibility controls
 │ └── Viewer3D.tsx # Main 3D visualization component
 ├── hooks/ # Custom React hooks
+│ ├── useRefinementSplat.ts # Loads partitioned/single-file Gaussian splat data
+│ ├── useRefinementHasSplat.ts # Lightweight check for splat data existence
+│ ├── useInterval.ts # Polling helper for periodic updates
 │ └── useColorScheme.ts # Theme detection hook
+├── types/ # TypeScript type definitions
+│ └── splat.ts # SplatEffect type for reveal animations
 ├── store/ # Global state management
+│ ├── domainStore.ts # Domain data, loading states (incl. splatLoadingAtom)
+│ ├── visualizationStore.ts # Visibility toggles (portals, meshes, splat, etc.)
 │ └── camera-store.ts # Camera position and target state
 ├── utils/ # Utility functions
+│ ├── splatShaders.ts # GLSL shader utilities for splat reveal animations
 │ ├── ply-parser.web.ts # PLY parsing with optional Web Worker
 │ ├── posemeshClientApi.ts # Frontend API client
 │ ├── posemeshServerApi.ts # Backend API client

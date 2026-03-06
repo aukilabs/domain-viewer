@@ -32,9 +32,12 @@ Manages all domain-related data fetched from the Posemesh API.
 - `alignmentMatrixAtom` - 4x4 transformation matrix
 - `splatDataAtom` - Splat metadata (file ID + alignment matrix)
 - `splatArrayBufferAtom` - Downloaded splat binary data
+- `domainDataItemsAtom` - Raw domain data items list from the server (used by `useRefinementSplat`)
+- `refinementIdAtom` - Canonical refinement ID for splat loading
 
 #### Primitive Atoms (State)
-- `isLoadingAtom` - Global loading state
+- `isLoadingAtom` - Global loading state (domain metadata fetch)
+- `splatLoadingAtom` - Splat binary download state (set by `DomainLoader` / `RefinementSplat`)
 - `loadingErrorAtom` - Error message string
 - `errorDetailsAtom` - Detailed error information
 - `isInIframeAtom` - Iframe detection flag

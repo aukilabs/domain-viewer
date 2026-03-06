@@ -9,7 +9,7 @@
  * Supports both partitioned splats (with LOD: full/coarse/fine) and single-file splats,
  * including SOG compressed format (.sogs.zip).
  */
-import type { SplatFileType } from '@sparkjsdev/spark';
+import { SplatFileType } from '@/components/3d/spark-r3f';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { DomainDataItem } from '@/types/domain';
 

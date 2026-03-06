@@ -6,18 +6,20 @@ import * as THREE from "three";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 import { useAtomValue } from "jotai";
 import { navMeshDataAtom } from "@/store/domainStore";
+import { navMeshVisibleAtom } from "@/store/visualizationStore";
 
 /**
  * Renders the navigation mesh that represents walkable areas in the space.
  * Reads nav mesh data from Jotai atoms and manages Three.js geometry lifecycle.
  */
 export default function NavMeshRenderer() {
+  const visible = useAtomValue(navMeshVisibleAtom);
   const navMeshData = useAtomValue(navMeshDataAtom);
   const { scene } = useThree();
   const groupRef = useRef<THREE.Group | null>(null);
 
   useEffect(() => {
-    if (!navMeshData) return;
+    if (!navMeshData || !visible) return;
 
     const loader = new OBJLoader();
     const objString = new TextDecoder().decode(navMeshData);
@@ -59,7 +61,7 @@ export default function NavMeshRenderer() {
         });
       }
     };
-  }, [navMeshData, scene]);
+  }, [navMeshData, scene, visible]);
 
   return null;
 }

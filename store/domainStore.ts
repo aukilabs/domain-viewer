@@ -157,6 +157,13 @@ export const refinementIdAtom = atom<string | null>(null);
 export const isLoadingAtom = atom<boolean>(false);
 
 /**
+ * Tracks whether Gaussian splat binary data is still downloading.
+ * Set to true by DomainLoader when a refinementId is found,
+ * set to false by RefinementSplat once useRefinementSplat finishes.
+ */
+export const splatLoadingAtom = atom<boolean>(false);
+
+/**
  * Stores error messages from failed data loading operations.
  * Null when no error has occurred.
  * 
