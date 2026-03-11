@@ -1,6 +1,6 @@
 import * as THREE from "three"
 import { PLYLoader } from "three/addons/loaders/PLYLoader.js"
-import { Portal } from "./posemeshClientApi";
+import { Portal } from "@/types/domain";
 
 const _position = new THREE.Vector3(0, 0, 0);
 const _quaternion = new THREE.Quaternion();

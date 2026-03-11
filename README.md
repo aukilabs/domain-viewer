@@ -91,8 +91,7 @@ Whether you're developing retail solutions, creating immersive experiences, or b
 ├── utils/ # Utility functions
 │ ├── splatShaders.ts # GLSL shader utilities for splat reveal animations
 │ ├── ply-parser.web.ts # PLY parsing with optional Web Worker
-│ ├── posemeshClientApi.ts # Frontend API client
-│ ├── posemeshServerApi.ts # Backend API client
+│ ├── aukiAuthManager.ts # Server-side auth token management (@auki/authentication)
 │ └── three-utils.ts # Three.js helper functions
 ├── public/ # Static assets
 │ ├── images/ # Image assets

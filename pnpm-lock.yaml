@@ -11,6 +11,9 @@ importers:
       '@amplitude/analytics-browser':
         specifier: ^2.35.4
         version: 2.36.2
+      '@auki/authentication':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@radix-ui/react-collapsible':
         specifier: ^1.1.2
         version: 1.1.12(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -146,6 +149,9 @@ packages:
 
   '@amplitude/plugin-web-vitals-browser@1.1.17':
     resolution: {integrity: sha512-FvlKjwT3mLM2zivEtAG7ev3SCb82sd6vbnlcZsjiqq3twSgodABQ50w4mEXcgyOrqfCq3K0qt3Da93P/OS+zxA==}
+
+  '@auki/authentication@0.1.0':
+    resolution: {integrity: sha512-UybmtB2HxsK8dm7VN3sqm2rxvcFXQ7q7Y0jyhNaJd1NmThdJMvIxunrnRGSwyre24Jc3HpmUGYBJYPILLKnIxw==}
 
   '@babel/code-frame@7.10.4':
     resolution: {integrity: sha512-vG6SvB6oYEhvgisZNFRmRCUkLz11c7rp+tbNTynGqc6mS1d5ATd/sGyV6W0KZZnXRKMTzZDRgQT3Ou9jhpAfUg==}
@@ -3612,6 +3618,8 @@ snapshots:
       '@amplitude/analytics-core': 2.41.2
       tslib: 2.8.1
       web-vitals: 5.1.0
+
+  '@auki/authentication@0.1.0': {}
 
   '@babel/code-frame@7.10.4':
     dependencies:

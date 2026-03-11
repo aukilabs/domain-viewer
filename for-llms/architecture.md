@@ -95,8 +95,7 @@ domain-viewer/
 │   └── errors.ts                 # Typed errors: AuthenticationError, ParseError, etc.
 │
 ├── utils/
-│   ├── posemeshServerApi.ts      # Server-side: auth with APP_KEY/APP_SECRET → DDS token
-│   ├── posemeshClientApi.ts      # Client-side API helpers (legacy)
+│   ├── aukiAuthManager.ts        # Server-side singleton: @auki/authentication token lifecycle
 │   ├── ply-parser.web.ts         # PLY binary parser
 │   ├── splatShaders.ts           # Custom GLSL for splat reveal effects
 │   ├── splat-storage.ts          # Splat caching utilities
@@ -210,12 +209,22 @@ Each renderer reads only its own visibility atom, so toggling one layer does not
 
 ## API Integration
 
-### Server-side (Next.js server actions)
+### Server-side authentication (token lifecycle)
 
-`app/actions.ts` → `fetchDomainInfo`:
-1. Authenticates with `AUKI_API_SERVER` using `AUKI_APP_KEY` + `AUKI_APP_SECRET` → app JWT
-2. Gets domain access token from `AUKI_DDS_SERVER`
-3. Returns domain info + server URL + access token to the client
+Authentication is managed by `utils/aukiAuthManager.ts`, a thin wrapper around the
+`@auki/authentication` library (`Client` class). The manager:
+
+1. Lazily creates a **single `Client` instance** per server process.
+2. Sets **app-key credentials** once from `AUKI_APP_KEY` / `AUKI_APP_SECRET`.
+3. On every `getDomainAccess(domainId)` call the library transparently handles the
+   full chain — network auth → discovery auth → domain access — and **caches /
+   refreshes tokens in memory** so repeat requests reuse valid tokens.
+4. No tokens are persisted to disk or browser storage; process restarts trigger
+   fresh authentication (fast, idempotent).
+
+The server action `app/actions.ts` → `fetchDomainInfo` calls `getDomainAccess`
+and maps the `DomainAccess` response to the existing result shape so downstream
+code (`DomainService`, renderers) is unaffected.
 
 ### Client-side
 
@@ -231,13 +240,13 @@ All requests include `Authorization: Bearer <domainAccessToken>` and a `posemesh
 
 ### Environment Variables
 
-| Variable | Purpose |
-|----------|---------|
-| `AUKI_APP_KEY` | Posemesh app key (server-side) |
-| `AUKI_APP_SECRET` | Posemesh app secret (server-side) |
-| `AUKI_API_SERVER` | API server URL for authentication |
-| `AUKI_DDS_SERVER` | DDS server URL for domain tokens |
-| `NEXT_PUBLIC_AMPLITUDE_KEY` | Amplitude analytics key |
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `AUKI_APP_KEY` | Yes | Posemesh app key (server-side) |
+| `AUKI_APP_SECRET` | Yes | Posemesh app secret (server-side) |
+| `AUKI_API_SERVER` | Yes | API server URL for authentication |
+| `AUKI_DDS_SERVER` | Yes | DDS server URL for domain tokens |
+| `NEXT_PUBLIC_AMPLITUDE_KEY` | No | Amplitude analytics key |
 
 ---
 
