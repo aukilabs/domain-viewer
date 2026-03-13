@@ -113,8 +113,8 @@ export function getSplatShaderStatements(
 ): string[] {
   return dyno.unindentLines(`
     ${outputs.gsplat} = ${inputs.gsplat};
-    float t = ${inputs.t};
-    float s = smoothstep(0.,10.,t-4.5)*10.;
+    float t = ${inputs.t} * 3.0;
+    float s = smoothstep(0.,10.,t-1.0)*10.;
     vec3 scales = ${inputs.gsplat}.scales;
     vec3 localPos = ${inputs.gsplat}.center;
     float l = length(localPos.xz);

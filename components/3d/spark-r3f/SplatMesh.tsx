@@ -36,12 +36,13 @@ export function SplatMesh({
   downsampleDistance,
   downsampleSmoothing,
   revealEffect,
-  revealDuration = 15,
+  revealDuration = 3,
   revealTimeScale = 2.5,
   ...groupProps
 }: SplatMeshProps) {
   const { camera } = useThree();
   const sparkModule = useSparkModule();
+  const isVisible = groupProps.visible ?? true;
   const [culled, setCulled] = useState<boolean>(false);
   const [splatMesh, setSplatMesh] = useState<SparkNativeSplatMesh | null>(null);
   const groupRef = useRef<Group | null>(null);
@@ -51,13 +52,28 @@ export function SplatMesh({
   const frameSkip = useRef(0);
 
   useEffect(() => {
-    if (!sparkModule || !fileBytes || (fileBytes as never as { detached: boolean }).detached) return;
+    if (!sparkModule || !fileBytes || fileBytes.byteLength === 0 || !isVisible) return;
 
-    const mesh = new sparkModule.SplatMesh({
-      fileBytes,
-      editable: false,
-      fileType: format as never,
-    }) as SparkNativeSplatMesh;
+    let creationBytes: ArrayBuffer;
+    try {
+      // Spark can transfer/detach buffers; keep the prop buffer reusable across toggles.
+      creationBytes = fileBytes.slice(0);
+    } catch (error) {
+      console.error("[SplatMesh] Failed to copy file bytes:", error);
+      return;
+    }
+
+    let mesh: SparkNativeSplatMesh;
+    try {
+      mesh = new sparkModule.SplatMesh({
+        fileBytes: creationBytes,
+        editable: false,
+        fileType: format as never,
+      }) as SparkNativeSplatMesh;
+    } catch (err) {
+      console.error("[SplatMesh] Failed to create mesh:", err);
+      return;
+    }
 
     void mesh.initialized
       ?.then(() => {
@@ -82,7 +98,15 @@ export function SplatMesh({
     return () => {
       mesh.dispose();
     };
-  }, [fileBytes, format, sparkModule]);
+  }, [fileBytes, format, sparkModule, isVisible]);
+
+  useEffect(() => {
+    if (isVisible) return;
+    setSplatMesh((prev) => {
+      prev?.dispose?.();
+      return null;
+    });
+  }, [isVisible]);
 
   useEffect(() => {
     if (!splatMesh || !revealEffect) return;
@@ -90,12 +114,15 @@ export function SplatMesh({
   }, [splatMesh, revealEffect]);
 
   useFrame((_state, delta) => {
-    if (!splatMesh || !revealEffect || animationComplete.current) return;
+    if (!isVisible || !splatMesh || !revealEffect || animationComplete.current) return;
 
     animateT.current += delta * revealTimeScale;
 
     if (animateT.current >= revealDuration) {
       animationComplete.current = true;
+      splatMesh.objectModifier = undefined;
+      splatMesh.updateGenerator();
+      return;
     }
 
     frameSkip.current++;
@@ -118,6 +145,7 @@ export function SplatMesh({
 
   const cullCheckIntervalMs = 80 + Math.floor(Math.random() * 20);
   useInterval(() => {
+    if (!isVisible) return;
     if (splatMesh && groupRef.current && maxDistance && maxDistance > 0) {
       const splatCenter = new Vector3();
       groupRef.current.getWorldPosition(splatCenter);
@@ -132,7 +160,9 @@ export function SplatMesh({
 
   return (
     <group {...groupProps} ref={groupRef}>
-      {splatMesh && !culled && <primitive object={splatMesh} dispose={null} />}
+      {splatMesh && !culled && isVisible && (
+        <primitive object={splatMesh} dispose={null} />
+      )}
     </group>
   );
 }

@@ -75,11 +75,9 @@ export default function PointCloudRenderer() {
     };
   }, [material]);
 
-  if (!geometry || !visible) return null;
-
   return (
-    <group matrixAutoUpdate={false} matrix={alignmentMatrix4 ?? undefined}>
-      <points geometry={geometry} material={material} matrixAutoUpdate={false} />
+    <group matrixAutoUpdate={false} matrix={alignmentMatrix4 ?? undefined} visible={visible && !!geometry}>
+      {geometry && <points geometry={geometry} material={material} matrixAutoUpdate={false} />}
     </group>
   );
 }

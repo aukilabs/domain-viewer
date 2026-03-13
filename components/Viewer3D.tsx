@@ -11,10 +11,12 @@ import { Canvas } from "@react-three/fiber";
 import { cameraControlModeAtom } from "@/store/camera-store";
 
 // Jotai atoms - domain store
-import { domainDataAtom, domainIdAtom, splatDataAtom, refinementIdAtom } from "@/store/domainStore";
+import { domainDataAtom, domainIdAtom, refinementIdAtom, splatLoadingAtom } from "@/store/domainStore";
+// Jotai atoms - visibility
+import { splatVisibleAtom } from "@/store/visualizationStore";
 
 // Jotai hooks
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 
 // Local components - Scene and controllers
 import Scene from "./3d/Scene";
@@ -51,12 +53,18 @@ interface Viewer3DProps {
  * layer never re-renders another.
  */
 export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
-  // Read domain data from atoms
+  // Read domain data and splat visibility from atoms
   const domainData = useAtomValue(domainDataAtom);
   const domainId = useAtomValue(domainIdAtom);
-  const splatData = useAtomValue(splatDataAtom);
   const refinementId = useAtomValue(refinementIdAtom);
-  
+  const splatVisible = useAtomValue(splatVisibleAtom);
+  const setSplatLoading = useSetAtom(splatLoadingAtom);
+
+  // When splat is hidden, clear loading state so overlay does not hang
+  useEffect(() => {
+    if (!splatVisible) setSplatLoading(false);
+  }, [splatVisible, setSplatLoading]);
+
   const [controlMode, setControlMode] = useAtom(cameraControlModeAtom);
   const controlModeRef = useMemo(() => ({ current: controlMode }), [controlMode]);
   const fpsStart = useMemo<[number, number, number]>(() => [0, 1.6, 3], []);
@@ -125,7 +133,7 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
         <OcclusionMeshRenderer />
         <NavMeshRenderer />
         {refinementId && domainData && (
-          <RefinementSplat refinementId={refinementId} />
+          <RefinementSplat refinementId={refinementId} visible={splatVisible} />
         )}
         {controlMode === "fps" ? (
           <>
