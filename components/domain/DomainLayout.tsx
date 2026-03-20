@@ -61,6 +61,16 @@ const DomainLayout = memo(function DomainLayout({
       {children}
       <Viewer3D isEmbed={isInIframe} />
       <DomainControls hideUI={hideUI} domainId={domainId} />
+      <div className="absolute bottom-4 right-4 z-40 pointer-events-none">
+        <Image
+          src="/images/logo.svg"
+          alt="Auki Logo"
+          width={48}
+          height={76}
+          priority
+          className="w-[48px] h-[76px] opacity-60"
+        />
+      </div>
       <LoadingOverlay />
     </div>
   );

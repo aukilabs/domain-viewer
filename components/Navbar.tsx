@@ -86,13 +86,15 @@ export default function Navbar({ currentDomainId }: NavbarProps) {
           aria-label="Domain ID input"
           aria-invalid={hasError}
         />
-        <button
-          type="submit"
-          disabled={isLoading || !!validationError || !domainId.trim()}
-          className="shrink-0 h-9 px-4 rounded-[20px] bg-white/15 hover:bg-white/25 text-sm font-medium text-white transition-colors disabled:opacity-40 disabled:pointer-events-none"
-        >
-          Load
-        </button>
+        {!isLoading && (
+          <button
+            type="submit"
+            disabled={!!validationError || !domainId.trim()}
+            className="shrink-0 h-9 px-4 rounded-[20px] bg-white/15 hover:bg-white/25 text-sm font-medium text-white transition-colors disabled:opacity-40 disabled:pointer-events-none"
+          >
+            Load
+          </button>
+        )}
       </form>
       {validationError && (
         <p className="text-red-400 text-xs mt-1.5 text-center max-w-full truncate">
