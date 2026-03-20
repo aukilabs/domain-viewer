@@ -126,7 +126,7 @@ export default function Viewer3D({ isEmbed = false }: Viewer3DProps) {
 
   return (
     <div className="w-full h-full bg-neutral-50 dark:bg-neutral-900 touch-none relative" tabIndex={0} onPointerDown={handleFirstInteraction} onWheel={handleFirstInteraction}>
-      <Canvas camera={{ position: [15, 15, 15], fov: 50 }} gl={{ alpha: true }}>
+      <Canvas camera={{ position: [15, 15, 15], fov: 50 }} gl={{ alpha: true, preserveDrawingBuffer: true }}>
         <Scene />
         <PointCloudRenderer />
         <PortalRenderer />

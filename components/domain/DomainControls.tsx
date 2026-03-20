@@ -6,6 +6,7 @@ import { isInIframeAtom } from "@/store/domainStore";
 import { ToggleVisibility } from "@/components/ToggleVisibility";
 import Navbar from "@/components/Navbar";
 import DomainInfo from "@/components/DomainInfo";
+import DomainShare from "@/components/DomainShare";
 
 const DomainControls = memo(function DomainControls({
   hideUI,
@@ -21,6 +22,7 @@ const DomainControls = memo(function DomainControls({
         <ToggleVisibility />
         <Navbar currentDomainId={domainId} />
         <DomainInfo />
+        <DomainShare />
       </div>
     </div>
   );
