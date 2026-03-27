@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useThree } from "@react-three/fiber";
-import { WebGLRenderer } from "three";
+import { ShaderMaterial, WebGLRenderer } from "three";
 import useInterval from "@/hooks/useInterval";
 import { useSparkModule } from "./useSparkModule";
 
@@ -17,36 +17,53 @@ export function SparkRenderer({
 }: SparkRendererProps) {
   const { gl, scene } = useThree();
   const sparkModule = useSparkModule();
+  const sparkRendererRef = useRef<InstanceType<
+    NonNullable<ReturnType<typeof useSparkModule>>["SparkRenderer"]
+  > | null>(null);
   const prevSceneVersionRef = useRef<number>(-1);
+  const savedPixelRatioRef = useRef<number | null>(null);
 
-  const sparkRenderer = useMemo(() => {
-    if (!sparkModule) return null;
+  useEffect(() => {
+    if (!sparkModule) return;
 
     const glRenderer = gl as unknown as WebGLRenderer;
-    const pixelRatio = glRenderer.getPixelRatio();
-    if (pixelRatio > 1.0) {
+    savedPixelRatioRef.current = glRenderer.getPixelRatio();
+    if (savedPixelRatioRef.current > 1.0) {
       glRenderer.setPixelRatio(1.0);
     }
+
     const renderer = new sparkModule.SparkRenderer({
       renderer: glRenderer,
       maxStdDev: Math.sqrt(5),
       minPixelRadius: 2,
     });
     renderer.autoUpdate = autoUpdate;
-    return renderer;
+    sparkRendererRef.current = renderer;
+
+    return () => {
+      renderer.geometry?.dispose();
+      (renderer.material as ShaderMaterial)?.dispose();
+      (renderer as any).dispose?.();
+      sparkRendererRef.current = null;
+      if (savedPixelRatioRef.current !== null) {
+        glRenderer.setPixelRatio(savedPixelRatioRef.current);
+      }
+    };
   }, [autoUpdate, gl, sparkModule]);
 
   useEffect(() => {
-    if (!sparkRenderer) return;
-    if (sceneVersion > prevSceneVersionRef.current) {
+    const sr = sparkRendererRef.current;
+    if (!sr) return;
+    if (sceneVersion !== prevSceneVersionRef.current) {
       prevSceneVersionRef.current = sceneVersion;
-      sparkRenderer.update({ scene });
+      sr.update({ scene });
     }
-  }, [sceneVersion, scene, sparkRenderer]);
+  }, [sceneVersion, scene]);
 
   useInterval(() => {
-    if (sparkRenderer && !sparkRenderer.autoUpdate) {
-      sparkRenderer.update({ scene });
+    const sr = sparkRendererRef.current;
+    if (sr && !sr.autoUpdate) {
+      sr.update({ scene });
     }
   }, 100);
 

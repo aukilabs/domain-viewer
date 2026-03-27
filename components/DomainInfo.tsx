@@ -1,90 +1,129 @@
 "use client"
 
-import { useState, memo } from "react"
-import { ChevronDown, Globe, Clock, Database, Link } from "lucide-react"
-import { Card } from "@/components/ui/Card"
-import { InfoRow } from "@/components/ui/InfoRow"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ToggleVisibility } from "@/components/ToggleVisibility"
+import { useState, useEffect, useRef, memo } from "react"
+import { Info, Copy } from "lucide-react"
 import { useAtomValue } from "jotai"
 import { domainInfoAtom } from "@/store/domainStore"
 import { useAnalytics } from "@/hooks/useAnalytics"
 
 const DomainInfo = memo(function DomainInfo() {
-  const [isDetailsOpen, setIsDetailsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
   const domainInfo = useAtomValue(domainInfoAtom)
   const { trackFieldCopied } = useAnalytics()
 
-  if (!domainInfo) {
-    return null
-  }
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setIsOpen(false)
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false)
+    }
+    document.addEventListener("keydown", handler)
+    return () => document.removeEventListener("keydown", handler)
+  }, [isOpen])
 
   const copyToClipboard = async (text: string, field: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      trackFieldCopied(domainInfo.id, field)
+      if (domainInfo) trackFieldCopied(domainInfo.id, field)
     } catch (err) {
-      console.error("Failed to copy text: ", err)
+      console.error("Failed to copy:", err)
     }
   }
 
+  if (!domainInfo) return null
+
+  const rows: { label: string; value: string; copyField?: string; format?: (v: string) => string }[] = [
+    { label: "Domain ID", value: domainInfo.id, copyField: "id" },
+    { label: "Name", value: domainInfo.name, copyField: "name" },
+    { label: "Server", value: domainInfo.url, copyField: "server_address" },
+    {
+      label: "Created",
+      value: domainInfo.createdAt,
+      copyField: "created_at",
+      format: (v) => new Date(v).toLocaleDateString(),
+    },
+    {
+      label: "Updated",
+      value: domainInfo.updatedAt,
+      copyField: "updated_at",
+      format: (v) => new Date(v).toLocaleDateString(),
+    },
+  ]
+
   return (
-    <div className="fixed inset-4 top-24 w-full overflow-y-auto space-y-2 font-sans md:fixed md:left-4 md:bottom-4 md:w-[400px] md:top-auto pointer-events-none touch-none">
-      <Card variant="default" padding="default" className="space-y-4">
-        <Collapsible
-          open={isDetailsOpen}
-          onOpenChange={setIsDetailsOpen}
+    <div
+      ref={ref}
+      className={`pointer-events-auto bg-white/10 backdrop-blur-md rounded-[24px] overflow-hidden shrink-0 transition-[width] duration-300 ease-out ${
+        isOpen ? "w-[280px]" : "w-12"
+      }`}
+    >
+      {/* Header */}
+      <button
+        onClick={() => setIsOpen((o) => !o)}
+        className="flex items-center h-12 w-full px-3.5 gap-2"
+        aria-label="Toggle info panel"
+      >
+        <Info className="w-5 h-5 text-white shrink-0" />
+        <span
+          className={`text-sm font-medium text-white whitespace-nowrap transition-opacity duration-200 ${
+            isOpen ? "opacity-100" : "opacity-0"
+          }`}
         >
-          <CollapsibleTrigger className="flex w-full items-center justify-between sticky top-0 bg-card py-2 z-10 pointer-events-auto">
-            <h2 className="text-card-foreground text-base sm:text-xl font-medium">Domain details</h2>
-            <ChevronDown className={`h-4 w-4 sm:h-5 sm:w-5 text-card-foreground transition-transform ${isDetailsOpen ? "" : "rotate-180"}`} />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-3 overflow-y-auto max-h-[calc(100vh-20rem)] pointer-events-none">
-            <InfoRow
-              icon={Database}
-              label="Domain ID"
-              value={domainInfo.id}
-              onCopy={() => copyToClipboard(domainInfo.id, "id")}
-              mono
-            />
+          Domain Info
+        </span>
+      </button>
 
-            <InfoRow
-              icon={Globe}
-              label="Domain Name"
-              value={domainInfo.name}
-              onCopy={() => copyToClipboard(domainInfo.name, "name")}
-            />
-
-            <InfoRow
-              icon={Link}
-              label="Domain server address"
-              value={domainInfo.url}
-              onCopy={() => copyToClipboard(domainInfo.url, "server_address")}
-            />
-
-            <InfoRow
-              icon={Clock}
-              label="Created at"
-              value={domainInfo.createdAt}
-              onCopy={() => copyToClipboard(domainInfo.createdAt, "created_at")}
-              formatValue={(val) => new Date(val).toLocaleString()}
-            />
-
-            <InfoRow
-              icon={Clock}
-              label="Last updated at"
-              value={domainInfo.updatedAt}
-              onCopy={() => copyToClipboard(domainInfo.updatedAt, "updated_at")}
-              formatValue={(val) => new Date(val).toLocaleString()}
-            />
-          </CollapsibleContent>
-        </Collapsible>
-      </Card>
-      <Card variant="default" padding="default" className="pointer-events-none">
-        <ToggleVisibility />
-      </Card>
+      {/* Expandable content */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="border-t border-white/10" />
+          <div className="p-3 space-y-0">
+            {rows.map((row, i) => {
+              const displayVal = row.format ? row.format(row.value) : row.value
+              return (
+                <div key={row.label}>
+                  <div className="flex items-start justify-between gap-2 py-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-white/50">{row.label}</p>
+                      <p className="text-sm text-white truncate mt-0.5">
+                        {displayVal}
+                      </p>
+                    </div>
+                    {row.copyField && (
+                      <button
+                        onClick={() => copyToClipboard(row.value, row.copyField!)}
+                        className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white transition-colors shrink-0 mt-1"
+                        aria-label={`Copy ${row.label}`}
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {i < rows.length - 1 && (
+                    <div className="border-b border-white/5" />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   )
-});
+})
 
-export default DomainInfo;
+export default DomainInfo

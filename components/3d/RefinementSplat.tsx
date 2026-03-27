@@ -3,20 +3,12 @@
 /**
  * RefinementSplat.tsx — Composition (Scene Integration)
  *
- * Top-level component that ties the data loading hook to the SparkSplat renderer.
- * Drop this inside your R3F <Canvas> to render Gaussian splats for a refinement.
- *
- * Supports both partitioned (tiled LOD) and single-file splats, including
- * SOG compressed format. Data is loaded progressively — partitions appear
- * one by one as they download.
- *
- * Visibility is gated at the outer RefinementSplat level so that SplatContent
- * fully unmounts when hidden. This is critical: SparkJS transfers ArrayBuffers
- * into the GPU on first use (making them detached). Full unmount/remount ensures
- * fresh buffer copies are created from the React Query cache on re-enable,
- * preventing the "splat won't turn back on" bug.
+ * Stays mounted while the domain/refinement is active and uses `visible` to hide.
+ * This avoids replaying reveal animation when users toggle visibility on/off.
+ * Buffer useMemos depend on useId() so each mount gets fresh copies (avoids
+ * reusing detached buffers after refinement changes or Strict Mode remounts).
  */
-import { Suspense, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { SparkRenderer, SplatMesh } from '@/components/3d/spark-r3f';
 import { useRefinementSplat } from '@/hooks/useRefinementSplat';
@@ -25,13 +17,12 @@ import {
   domainDataItemsAtom,
   splatLoadingAtom,
 } from '@/store/domainStore';
-import { splatVisibleAtom } from '@/store/visualizationStore';
 import type { SplatEffect } from '@/types/splat';
 
-/** All available reveal animation effects */
+const DEFAULT_REVEAL_DURATION = 3;
+
 const REVEAL_EFFECTS: SplatEffect[] = ['Magic'];
 
-/** Pick a random reveal effect */
 function randomRevealEffect(): SplatEffect {
   return REVEAL_EFFECTS[Math.floor(Math.random() * REVEAL_EFFECTS.length)];
 }
@@ -40,18 +31,23 @@ function randomRevealEffect(): SplatEffect {
 
 function SplatContent({
   refinementId,
-  allowReveal = true,
+  visible,
+  skipReveal = false,
+  onRevealPlayed,
 }: {
   refinementId: string;
-  allowReveal?: boolean;
+  visible: boolean;
+  skipReveal?: boolean;
+  onRevealPlayed?: () => void;
 }) {
   const domainData = useAtomValue(domainDataAtom);
   const domainDataItems = useAtomValue(domainDataItemsAtom);
   const setSplatLoading = useSetAtom(splatLoadingAtom);
-  const initialAllowRevealRef = useRef(allowReveal);
+  const revealEffectRef = useRef<SplatEffect>(randomRevealEffect());
+  const instanceId = useId();
   const revealEffect = useMemo(
-    () => (initialAllowRevealRef.current ? randomRevealEffect() : undefined),
-    [],
+    () => (skipReveal ? undefined : revealEffectRef.current),
+    [skipReveal],
   );
 
   const { data, isLoading, error } = useRefinementSplat({
@@ -66,23 +62,41 @@ function SplatContent({
     setSplatLoading(isLoading);
   }, [isLoading, setSplatLoading]);
 
+  // instanceId ensures each mount (including Strict Mode remount) gets fresh
+  // buffer copies; otherwise cached memos can hand detached buffers to Spark.
   const partitionBuffers = useMemo(() => {
     if (data?.type === 'partitions') {
-      return data.partitions.map((p) => p.loadedData!.slice(0));
+      return data.partitions.map((p) => {
+        try {
+          return p.loadedData!.slice(0);
+        } catch {
+          return new ArrayBuffer(0);
+        }
+      });
     }
     return [];
-  }, [data]);
+  }, [data, instanceId]);
 
   const singleBuffer = useMemo(() => {
     if (data?.type === 'single' && data.buffer) {
-      return data.buffer.slice(0);
+      try {
+        return data.buffer.slice(0);
+      } catch {
+        return null;
+      }
     }
     return null;
-  }, [data]);
+  }, [data, instanceId]);
 
   const hasRenderableData =
     (data?.type === 'partitions' && data.partitions.length > 0) ||
     data?.type === 'single';
+
+  useEffect(() => {
+    if (!skipReveal && hasRenderableData && !isLoading) {
+      onRevealPlayed?.();
+    }
+  }, [skipReveal, hasRenderableData, isLoading, onRevealPlayed]);
 
   if (isLoading && !hasRenderableData) return null;
   if (error) {
@@ -93,16 +107,18 @@ function SplatContent({
 
   // ── PARTITIONED SPLAT ──────────────────────────────────
   if (data.type === 'partitions') {
+    const sceneVersionBase = data.partitions.length;
     return (
-      <group>
+      <group visible={visible}>
         <SparkRenderer
           autoUpdate={false}
-          sceneVersion={data.partitions.length}
+          sceneVersion={sceneVersionBase * 10 + (visible ? 1 : 0)}
         />
         {data.partitions.map((partition, i) => (
           <SplatMesh
             key={i}
             fileBytes={partitionBuffers[i]}
+            visible={visible}
             position={[
               (partition.partitionX + 0.5) * partition.partitionSize,
               0,
@@ -111,12 +127,13 @@ function SplatContent({
             rotation={[Math.PI, 0, 0]}
             format={partition.splatFileType}
             partitionSize={partition.partitionSize}
-            maxDistance={partition.lodType === 'fine' ? 10 : 100}
-            fadeDistance={partition.lodType === 'fine' ? 2 : 1}
+            maxDistance={partition.lodType === 'fine' ? 50 : 500}
+            fadeDistance={partition.lodType === 'fine' ? 5 : 10}
             downsampleNth={partition.lodType === 'fine' ? 5 : 10}
-            downsampleDistance={partition.lodType === 'fine' ? 6 : 30}
+            downsampleDistance={partition.lodType === 'fine' ? 30 : 200}
             downsampleSmoothing={partition.lodType === 'fine' ? 0.6 : 0.8}
             revealEffect={revealEffect}
+            revealDuration={DEFAULT_REVEAL_DURATION}
             frustumCulled={false}
           />
         ))}
@@ -127,16 +144,18 @@ function SplatContent({
   // ── SINGLE-FILE SPLAT ──────────────────────────────────
   if (data.type === 'single' && singleBuffer && singleBuffer.byteLength > 0) {
     return (
-      <group>
-        <SparkRenderer autoUpdate={false} sceneVersion={0} />
+      <group visible={visible}>
+        <SparkRenderer autoUpdate={false} sceneVersion={visible ? 1 : 0} />
         <SplatMesh
           fileBytes={singleBuffer}
+          visible={visible}
           format={data.splatFileType}
           rotation={[Math.PI, 0, 0]}
           partitionSize={100}
-          maxDistance={50}
-          fadeDistance={4}
+          maxDistance={500}
+          fadeDistance={10}
           revealEffect={revealEffect}
+          revealDuration={DEFAULT_REVEAL_DURATION}
           frustumCulled={false}
         />
       </group>
@@ -146,37 +165,30 @@ function SplatContent({
   return null;
 }
 
-// ── Exported wrapper with Suspense ───────────────────────
+// ── Exported wrapper ─────────────────────────────────────
+// Viewer3D keeps this mounted and passes visibility through `visible`.
 
 export default function RefinementSplat({
   refinementId,
+  visible,
 }: {
   refinementId: string;
+  visible: boolean;
 }) {
-  const visible = useAtomValue(splatVisibleAtom);
-  const setSplatLoading = useSetAtom(splatLoadingAtom);
-  const revealPlayedByRefinementRef = useRef<Record<string, boolean>>({});
-  const allowReveal = !revealPlayedByRefinementRef.current[refinementId];
+  const [revealPlayed, setRevealPlayed] = useState(false);
 
   useEffect(() => {
-    if (visible && allowReveal) {
-      revealPlayedByRefinementRef.current[refinementId] = true;
-    }
-  }, [visible, allowReveal, refinementId]);
-
-  // When toggled off, ensure splatLoading is cleared so overlays don't hang.
-  useEffect(() => {
-    if (!visible) setSplatLoading(false);
-  }, [visible, setSplatLoading]);
-
-  // Visibility gate at this level: SplatContent fully unmounts when hidden.
-  // This is intentional — SparkJS transfers ArrayBuffers to GPU on first use,
-  // making them detached. Full unmount guarantees fresh copies on re-enable.
-  if (!visible) return null;
+    setRevealPlayed(false);
+  }, [refinementId]);
 
   return (
     <Suspense fallback={null}>
-      <SplatContent refinementId={refinementId} allowReveal={allowReveal} />
+      <SplatContent
+        refinementId={refinementId}
+        visible={visible}
+        skipReveal={revealPlayed}
+        onRevealPlayed={() => setRevealPlayed(true)}
+      />
     </Suspense>
   );
 }

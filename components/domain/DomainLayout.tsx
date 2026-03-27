@@ -26,50 +26,42 @@ function LoadingOverlay() {
 
   return (
     <div
-      className={`absolute inset-0 z-[100] flex flex-col items-center justify-center transition-opacity duration-700 ${
+      className={`absolute inset-0 z-[100] flex items-center justify-center transition-opacity duration-700 ${
         fadeOut ? "opacity-0" : "opacity-100"
       }`}
     >
-      <div className="absolute inset-0 bg-background/80 backdrop-blur-xl" />
-      <div className="relative z-10 flex flex-col items-center gap-3">
+      <div className="absolute inset-0 bg-[#050505]/80 backdrop-blur-xl" />
+      <div className="relative z-10 bg-white/10 backdrop-blur-md rounded-[24px] px-10 py-10 flex flex-col items-center gap-5">
         <Image
           src="/images/logo.svg"
           alt="Auki"
-          width={40}
-          height={64}
+          width={32}
+          height={52}
           priority
-          className="w-[40px] h-[64px] mb-4 opacity-90"
+          className="w-[32px] h-[52px] opacity-90"
         />
-        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
-          Real World Web
-        </h1>
-        <p className="text-base sm:text-lg text-muted-foreground font-medium">
+        <h1 className="text-lg font-medium text-white tracking-tight">
           Loading domain&hellip;
-        </p>
-        <div className="mt-6 h-0.5 w-32 overflow-hidden rounded-full bg-muted">
-          <div className="h-full w-full origin-left animate-pulse bg-primary/60 rounded-full" />
-        </div>
+        </h1>
+        <div className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
       </div>
     </div>
   );
 }
 
-const DomainLayout = memo(function DomainLayout({ 
-  hideUI, 
-  domainId, 
-  children 
+const DomainLayout = memo(function DomainLayout({
+  hideUI,
+  domainId,
+  children,
 }: DomainLayoutProps) {
   const isInIframe = useAtomValue(isInIframeAtom);
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-card">
+    <div className="relative h-screen w-full overflow-hidden bg-[#050505]">
       {children}
       <Viewer3D isEmbed={isInIframe} />
-      <DomainControls
-        hideUI={hideUI}
-        domainId={domainId}
-      />
-      <div className="absolute bottom-4 right-4">
+      <DomainControls hideUI={hideUI} domainId={domainId} />
+      <div className="absolute bottom-4 right-4 z-40 pointer-events-none">
         <Image
           src="/images/logo.svg"
           alt="Auki Logo"
@@ -84,14 +76,6 @@ const DomainLayout = memo(function DomainLayout({
   );
 });
 
-/**
- * Props interface for DomainLayout component
- * 
- * @interface DomainLayoutProps
- * @property {boolean} hideUI - Whether to hide the UI controls
- * @property {string} domainId - The current domain ID
- * @property {React.ReactNode} [children] - Optional children components
- */
 interface DomainLayoutProps {
   hideUI: boolean;
   domainId: string;
