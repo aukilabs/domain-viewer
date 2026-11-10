@@ -8,8 +8,6 @@ if (!API_SERVER || !DDS_SERVER) {
   )
 }
 
-const AXIOS_TIMEOUT = 240000 // 4 minutes
-
 class PosemeshServerApi {
   private accessToken: string | null = null
   private domainAccessToken: string | null = null
