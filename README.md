@@ -134,6 +134,8 @@ cd domain-viewer
 npm install
 ```
 
+Use npm: `package-lock.json` is the only lockfile, and the Docker image builds with `npm ci`. The `@sparkjsdev/spark` dependency is pinned to a commit of the private `aukilabs/sparkjs` fork, so installing needs SSH access to that repo, plus a Rust toolchain with the `wasm32-unknown-unknown` target for its build step.
+
 3. Create a `.env.local` file in the root directory with your credentials and servers:
 ```bash
 AUKI_APP_KEY=your_app_key_here
