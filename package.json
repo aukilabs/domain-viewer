@@ -30,6 +30,9 @@
     "three": "^0.182.0"
   },
   "overrides": {
+    "next": {
+      "postcss": "^8.5.32"
+    },
     "@sparkjsdev/spark": {
       "three": "$three"
     }
