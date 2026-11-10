@@ -8,6 +8,26 @@ if (!API_SERVER || !DDS_SERVER) {
   )
 }
 
+/**
+ * Summarises a JWT for logging: subject and expiry only. Never log the token
+ * itself, since anyone who can read the logs could use it until it expires.
+ * This only decodes the payload for display; it does not verify anything.
+ */
+function describeToken(token: unknown): { sub?: string; expires?: string } {
+  if (typeof token !== "string") return {}
+  try {
+    const payload = token.split(".")[1]
+    if (!payload) return {}
+    const claims = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")))
+    return {
+      sub: typeof claims.sub === "string" ? claims.sub : undefined,
+      expires: typeof claims.exp === "number" ? new Date(claims.exp * 1000).toISOString() : undefined,
+    }
+  } catch {
+    return {}
+  }
+}
+
 class PosemeshServerApi {
   private accessToken: string | null = null
   private domainAccessToken: string | null = null
@@ -47,7 +67,7 @@ class PosemeshServerApi {
 
       const response = await request.json();
       this.accessToken = response.access_token;
-      console.log("Authentication response:", JSON.stringify(response, null, 2))
+      console.log("Authenticated app with API server:", describeToken(response.access_token))
     } catch (error) {
       console.error("Authentication failed:", error)
       throw new Error(error instanceof Error ? error.message : "Authentication failed")
@@ -73,7 +93,6 @@ class PosemeshServerApi {
         }
       });
 
-      console.log("Domin id:", domainId);
       if (!request.ok) {
         const raw = await request.text().catch(() => "");
         let message = raw;
@@ -87,7 +106,12 @@ class PosemeshServerApi {
       const response = await request.json();
       this.domainAccessToken = response.access_token;
       this.domainServerUrl = response.domain_server.url;
-      console.log("Domain authentication response:", JSON.stringify(response, null, 2))
+      console.log("Authenticated domain:", {
+        domainId,
+        name: response.name,
+        domainServer: response.domain_server.url,
+        token: describeToken(response.access_token),
+      })
       return response;
     } catch (error) {
       console.error("Domain authentication failed:", error)
