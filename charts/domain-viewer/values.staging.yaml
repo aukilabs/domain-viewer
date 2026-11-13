@@ -1,4 +1,4 @@
 k8s-service:
   containerImage:
-    tag: 1828772fe995b359bb300ad658dacc4e15758329
+    tag: snapshot@sha256:14d4d5e57282ef589c4efff01bec4f40ff6fdeb834ed935225304d8260525d00
     pullPolicy: IfNotPresent
