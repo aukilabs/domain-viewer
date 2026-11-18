@@ -9,7 +9,7 @@ on:
         required: false
       argocd_host:
         required: false
-      argocd_password:
+      argocd_token:
         required: false
       npm_publisher_token:
         required: false
@@ -76,21 +76,39 @@ jobs:
           docker buildx create --use
           docker buildx build $next_build_args --platform linux/amd64 $tags --push .
 
-      - name: Authenticate ArgoCD
-        uses: clowdhaus/argo-cd-action@v2.3.0
+      - name: Set up Argo CD
         if: ${{ inputs.enable_sync || inputs.enable_restart }}
-        with:
-          command: login
-          options: --username admin --password "${{ secrets.argocd_password }}" --grpc-web "${{ secrets.argocd_host }}:443"
+        shell: bash
+        env:
+          ARGOCD_AUTH_TOKEN: ${{ secrets.argocd_token }}
+          ARGOCD_HOST: ${{ secrets.argocd_host }}
+        run: |
+          set -euo pipefail
+          version=v3.6.1
+          asset=argocd-linux-amd64
+          pinned=46d2fc941071f0a0c36326a67a431d34b1479e1a24737f7b367abc93968beadc
+          dir="${RUNNER_TEMP}/argocd-cli"
+          mkdir -p "$dir"
+          base="https://github.com/argoproj/argo-cd/releases/download/${version}"
+          curl -fsSL -o "$dir/$asset" "$base/$asset"
+          curl -fsSL -o "$dir/cli_checksums.txt" "$base/cli_checksums.txt"
+          published="$(awk -v asset="$asset" '$2 == asset { print $1 }' "$dir/cli_checksums.txt")"
+          if [ "$published" != "$pinned" ]; then
+            echo "Checksum for ${asset} does not match." >&2
+            exit 1
+          fi
+          echo "${pinned}  ${asset}" | (cd "$dir" && sha256sum -c -)
+          install -m 0755 "$dir/$asset" "$dir/argocd"
+          echo "$dir" >> "$GITHUB_PATH"
+          host="${ARGOCD_HOST}:443"
+          argocd account get-user-info --server "$host" --grpc-web --auth-token "$ARGOCD_AUTH_TOKEN" >/dev/null
+          {
+            echo "ARGOCD_SERVER=${host}"
+            echo "ARGOCD_AUTH_TOKEN=${ARGOCD_AUTH_TOKEN}"
+          } >> "$GITHUB_ENV"
       - name: Sync ArgoCD app
-        uses: clowdhaus/argo-cd-action@v2.3.0
         if: ${{ inputs.enable_sync }}
-        with:
-          command: app sync "${{ env.ARGOCD_APP }}"
-          options: --grpc-web --async
+        run: argocd app sync "${{ env.ARGOCD_APP }}" --grpc-web --async
       - name: Restart ArgoCD app
-        uses: clowdhaus/argo-cd-action@v2.3.0
         if: ${{ inputs.enable_restart }}
-        with:
-          command: app actions run "${{ env.ARGOCD_APP }}" restart
-          options: --kind Deployment --resource-name "${{ env.ARGOCD_APP }}" --grpc-web
+        run: argocd app actions run "${{ env.ARGOCD_APP }}" restart --kind Deployment --resource-name "${{ env.ARGOCD_APP }}" --grpc-web
